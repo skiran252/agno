@@ -56,8 +56,6 @@ def get_session_title(session: Union[AgentSession, TeamSession]) -> str:
         runs = cast(List[Any], runs)
         for _run in runs:
             try:
-                print(type(_run))
-                print("HERE", _run)
                 if "response" in _run:
                     run_parsed = AgentRun.model_validate(_run)
                 else:
