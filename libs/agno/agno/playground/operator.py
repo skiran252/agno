@@ -58,17 +58,25 @@ def get_session_title(session: Union[AgentSession, TeamSession]) -> str:
             try:
                 if "response" in _run:
                     run_parsed = AgentRun.model_validate(_run)
+                    if run_parsed.message is not None and run_parsed.message.role == "user":
+                        content = run_parsed.message.get_content_string()
+                        if content:
+                            return content
+                        else:
+                            return "No title"
                 else:
                     if "agent_id" in _run:
                         run_parsed = RunResponse.from_dict(_run)
                     else:
                         run_parsed = TeamRunResponse.from_dict(_run)
-                if run_parsed.message is not None and run_parsed.message.role == "user":
-                    content = run_parsed.message.get_content_string()
-                    if content:
-                        return content
-                    else:
-                        return "No title"
+
+                    if run_parsed.messages is not None and len(run_parsed.messages) > 0 and run_parsed.messages[0].role == "user":
+                        content = run_parsed.messages[0].get_content_string()
+                        if content:
+                            return content
+                        else:
+                            return "No title"
+
             except Exception as e:
                 logger.error(f"Error parsing chat: {e}")
 

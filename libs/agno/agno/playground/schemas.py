@@ -47,7 +47,7 @@ class AgentGetResponse(BaseModel):
                     memory_dict["memory_db"] = str(agent.memory.memory_db)
                 if agent.memory.summary_db is not None:
                     memory_dict["summary_db"] = str(agent.memory.summary_db)
-                    
+
             else:
                 memory_dict = None
         else:
@@ -151,6 +151,8 @@ class TeamGetResponse(BaseModel):
 
     @classmethod
     def from_team(self, team: Team) -> "TeamGetResponse":
+        import json
+
         if isinstance(team.memory, Memory):
             memory_dict = {"name": "Memory"}
             if team.memory.model is not None:
@@ -167,7 +169,7 @@ class TeamGetResponse(BaseModel):
             memory_dict = {"name": team.memory.db.__class__.__name__}
         else:
             memory_dict = None
-            
+
         return TeamGetResponse(
             team_id=team.team_id,
             name=team.name,
@@ -180,7 +182,7 @@ class TeamGetResponse(BaseModel):
             instructions=team.instructions,
             description=team.description,
             expected_output=team.expected_output,
-            context=team.context,
+            context=json.dumps(team.context) if isinstance(team.context, dict) else team.context,
             enable_agentic_context=team.enable_agentic_context,
             response_model=team.response_model,
             mode=team.mode,

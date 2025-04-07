@@ -210,7 +210,6 @@ agent_team = Team(
     markdown=True,
     enable_agentic_context=True,
     show_members_responses=True,
-    debug_mode=True,
     storage=PostgresStorage(
         table_name="financial_news_team",
         db_url=db_url,
