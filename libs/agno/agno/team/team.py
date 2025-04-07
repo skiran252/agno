@@ -188,6 +188,9 @@ class Team:
     # This helps us improve the Teams implementation and provide better support
     telemetry: bool = True
 
+    # Register on platform
+    register_on_platform: bool = False
+
     def __init__(
         self,
         members: List[Union[Agent, "Team"]],
@@ -196,6 +199,7 @@ class Team:
         name: Optional[str] = None,
         team_id: Optional[str] = None,
         user_id: Optional[str] = None,
+        register_on_platform: bool = False,
         session_id: Optional[str] = None,
         session_name: Optional[str] = None,
         session_state: Optional[Dict[str, Any]] = None,
@@ -242,6 +246,7 @@ class Team:
         self.team_id = team_id
 
         self.user_id = user_id
+        self.register_on_platform = register_on_platform
         self.session_id = session_id
         self.session_name = session_name
         self.session_state = session_state
@@ -5203,6 +5208,13 @@ class Team:
         )
 
     def _log_team_run(self) -> None:
+
+        # TODO: Move to a thread
+        print("Registering Team on platform")
+
+        if self.register_on_platform:
+            self._register_team_on_platform()
+
         if not self.telemetry and not self.monitoring:
             return
 
@@ -5226,6 +5238,10 @@ class Team:
             log_debug(f"Could not create team event: {e}")
 
     async def _alog_team_run(self) -> None:
+        print("Logging Team Run (Async)")
+        if self.register_on_platform:
+            self._register_team_on_platform()
+
         if not self.telemetry and not self.monitoring:
             return
 
@@ -5357,3 +5373,32 @@ class Team:
         except Exception:
             # If copy fails, return as is
             return field_value
+
+    def _register_team_on_platform(self) -> None:
+        from agno.api.team import TeamCreate, create_team
+        print("Registering Team on platform")
+        try:
+            create_team(
+                team=TeamCreate(
+                    team_id=self.team_id,
+                    team_data=self._get_team_data(),
+                ),
+            )
+        except Exception as e:
+            log_debug(f"Could not create team on platform: {e}")
+
+    async def _aregister_team_on_platform(self) -> None:
+
+        from agno.api.team import TeamCreate, acreate_team
+
+        print("Registering Team on platform (Async)")
+        try:
+            await acreate_team(
+                team=TeamCreate(
+                    team_id=self.team_id,
+                    team_data=self._get_team_data(),
+                ),
+            )
+        except Exception as e:
+            print(f"Could not create team on platform: {e}")
+            log_debug(f"Could not create team on platform: {e}")

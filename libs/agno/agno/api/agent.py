@@ -25,7 +25,7 @@ def create_agent_run(run: AgentRunCreate, monitor: bool = False) -> None:
     if not agno_cli_settings.api_enabled:
         return
 
-    log_debug("Logging Agent Run")
+
     with api.AuthenticatedClient() as api_client:
         try:
             api_client.post(
@@ -41,7 +41,7 @@ async def acreate_agent_run(run: AgentRunCreate, monitor: bool = False) -> None:
     if not agno_cli_settings.api_enabled:
         return
 
-    log_debug("Logging Agent Run (Async)")
+
     async with api.AuthenticatedAsyncClient() as api_client:
         try:
             await api_client.post(
@@ -55,8 +55,7 @@ def create_agent(agent: AgentCreate) -> None:
     if not agno_cli_settings.api_enabled:
         return
 
-    log_debug("Logging Agent App")
-    log_debug(f"Agent: {agent.model_dump()}")
+
     with api.AuthenticatedClient() as api_client:
         try:
             api_client.post(
@@ -64,22 +63,19 @@ def create_agent(agent: AgentCreate) -> None:
                 json={"agent": agent.model_dump()},
             )
         except Exception as e:
-            log_debug(f"Could not create Agent app: {e}")
+            log_debug(f"Could not create Agent: {e}")
 
 
 async def acreate_agent(agent: AgentCreate) -> None:
     if not agno_cli_settings.api_enabled:
         return
 
-    print("logging agent app (async)")
-    log_debug("Logging Agent App (Async)")
     async with api.AuthenticatedAsyncClient() as api_client:
         try:
             payload = {"agent": agent.model_dump(exclude_none=True)}
-            print("payload", payload)
             await api_client.post(
                 ApiRoutes.AGENT_CREATE,
                 json=payload,
             )
         except Exception as e:
-            log_debug(f"Could not create Agent app: {e}")
+            log_debug(f"Could not create Agent: {e}")

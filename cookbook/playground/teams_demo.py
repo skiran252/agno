@@ -163,8 +163,8 @@ agent_team = Team(
         finance_agent,
         research_agent,
         file_agent,
-        audio_agent,
-        video_agent,
+        # audio_agent,
+        # video_agent,
     ],
     model=OpenAIChat(id="gpt-4o"),
     mode="route",
@@ -192,6 +192,7 @@ agent_team = Team(
     ),
     expected_output="A good financial news report.",
     context="use USD as currency",
+    register_on_platform=True,
 )
 
 app = Playground(
