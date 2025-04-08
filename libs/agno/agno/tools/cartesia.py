@@ -2,13 +2,13 @@ import datetime
 import json
 from os import getenv
 from pathlib import Path
-from typing import Any, Dict, List, Optional, IO
+from typing import IO, Any, Dict, List, Optional
 
 from agno.tools import Toolkit
 from agno.utils.log import logger
 
 try:
-    from cartesia import Cartesia # type: ignore
+    from cartesia import Cartesia  # type: ignore
 except ImportError:
     raise ImportError("`cartesia` not installed. Please install using `pip install cartesia`")
 
@@ -718,7 +718,7 @@ class CartesiaTools(Toolkit):
         self,
         name: str,
         description: Optional[str] = None,
-        dataset_file: Optional[IO[bytes]] = None, # Accept file handle
+        dataset_file: Optional[IO[bytes]] = None,  # Accept file handle
     ) -> str:
         """Create a new dataset in Cartesia, optionally uploading a file.
 
@@ -735,7 +735,7 @@ class CartesiaTools(Toolkit):
             if description:
                 params["description"] = description
             if dataset_file:
-                params["file"] = dataset_file # Pass the file handle
+                params["file"] = dataset_file  # Pass the file handle
 
             result = self.client.datasets.create(**params)
             # Assuming result is JSON-serializable
@@ -761,9 +761,7 @@ class CartesiaTools(Toolkit):
             logger.error(f"Error getting Cartesia dataset: {e}")
             return json.dumps({"error": str(e)})
 
-    def update_dataset(
-        self, dataset_id: str, name: Optional[str] = None, description: Optional[str] = None
-    ) -> str:
+    def update_dataset(self, dataset_id: str, name: Optional[str] = None, description: Optional[str] = None) -> str:
         """Update information for a specific dataset.
 
         Args:
@@ -781,8 +779,8 @@ class CartesiaTools(Toolkit):
             if description is not None:
                 params["description"] = description
 
-            if len(params) == 1: # Only id was provided
-                 return json.dumps({"error": "No update parameters (name or description) provided."})
+            if len(params) == 1:  # Only id was provided
+                return json.dumps({"error": "No update parameters (name or description) provided."})
 
             result = self.client.datasets.update(**params)
             # Assuming result is JSON-serializable

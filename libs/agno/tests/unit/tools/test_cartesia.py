@@ -8,11 +8,9 @@ from unittest.mock import MagicMock, mock_open, patch
 import pytest
 
 from agno.tools.cartesia import CartesiaTools
-# Import the specific logger instance used by the tool
-from agno.utils.log import logger as agno_logger
-# Keep the logger import to reference its name, but we won't manipulate it directly
-from agno.utils.log import logger as agno_logger_instance
 
+# Import the specific logger instance used by the tool
+from agno.utils.log import logger as agno_logger_instance
 
 @pytest.fixture
 def mock_cartesia():
@@ -328,7 +326,9 @@ class TestCartesiaTools:
             assert result_data["success"] is True
 
             # Check records captured by caplog
-            expected_log = "Experimental controls (speed/emotion) were provided but might be ignored by the tts.bytes method."
+            expected_log = (
+                "Experimental controls (speed/emotion) were provided but might be ignored by the tts.bytes method."
+            )
             found_log = False
             for record in caplog.records:
                 if record.levelno == logging.WARNING and expected_log in record.getMessage():
@@ -426,11 +426,11 @@ class TestCartesiaTools:
                 language="en",
                 left_audio_path="left.wav",
                 right_audio_path="right.wav",
-                output_format_container="mp3", # Test uses mp3 output
+                output_format_container="mp3",  # Test uses mp3 output
                 output_format_sample_rate=44100,
                 # output_format_encoding="mp3", # Not needed for mp3
                 # output_format_bit_rate=128000, # Uses default
-                output_path="infill_output.mp3" # Specify output to trigger write
+                output_path="infill_output.mp3",  # Specify output to trigger write
             )
 
             result_data = json.loads(result)
@@ -439,12 +439,12 @@ class TestCartesiaTools:
             assert mock_file.call_count == 3
             # Check the correct method was called
             mock_cartesia.tts.infill.assert_called_once()
-            call_args = mock_cartesia.tts.infill.call_args[1] # Get kwargs
+            call_args = mock_cartesia.tts.infill.call_args[1]  # Get kwargs
 
             # Check parameters passed to tts.infill
             assert call_args["model_id"] == "sonic-2"
             assert call_args["infill_transcript"] == "Infill text"
-            assert "voice" in call_args # Infill expects nested voice object
+            assert "voice" in call_args  # Infill expects nested voice object
             assert call_args["voice"]["id"] == "a0e99841-438c-4a64-b679-ae501e7d6091"
             assert call_args["language"] == "en"
             assert call_args["output_format"]["container"] == "mp3"
@@ -454,7 +454,7 @@ class TestCartesiaTools:
             assert call_args["suffix_audio"] == b"audio data"
 
             assert result_data["success"] is True
-            assert "file_path" in result_data # Check file path is in result
+            assert "file_path" in result_data  # Check file path is in result
 
     def test_different_output_formats(self, mock_cartesia):
         """Test TTS with different output formats."""
@@ -564,7 +564,6 @@ class TestCartesiaTools:
     def test_text_to_speech_stream(self, mock_cartesia):
         """Test streaming TTS functionality returns success message."""
         with patch("builtins.open", mock_open()), patch.dict("os.environ", {"CARTESIA_API_KEY": "dummy_token"}):
-
             # Mock the tts.stream method (it doesn't need a return value for this test)
             mock_cartesia.tts.stream = MagicMock()
 
@@ -579,7 +578,7 @@ class TestCartesiaTools:
                 output_format_bit_rate=128000,
                 # Add experimental controls to ensure they are passed correctly
                 voice_experimental_controls_speed="slow",
-                voice_experimental_controls_emotion=["sadness"]
+                voice_experimental_controls_emotion=["sadness"],
             )
 
             # Parse the JSON result
@@ -587,12 +586,12 @@ class TestCartesiaTools:
 
             # Verify the API was called correctly
             mock_cartesia.tts.stream.assert_called_once()
-            call_args = mock_cartesia.tts.stream.call_args[1] # Get kwargs
+            call_args = mock_cartesia.tts.stream.call_args[1]  # Get kwargs
 
             # Check basic parameters
             assert call_args["model_id"] == "sonic-2"
             assert call_args["transcript"] == "Test transcript"
-            assert call_args["voice_id"] == "test-voice-id" # Stream uses direct voice_id
+            assert call_args["voice_id"] == "test-voice-id"  # Stream uses direct voice_id
             assert call_args["language"] == "en"
 
             # Check output format
@@ -604,7 +603,6 @@ class TestCartesiaTools:
             assert "voice_experimental_controls" in call_args
             assert call_args["voice_experimental_controls"]["speed"] == "slow"
             assert call_args["voice_experimental_controls"]["emotion"] == ["sadness"]
-
 
             # Verify correct response structure for the stream initiation message
             assert result_data["success"] is True
@@ -652,24 +650,18 @@ class TestCartesiaTools:
         # Enable the specific feature
         tools = CartesiaTools(voice_update_enabled=True)
         updated_voice_data = {
-             "id": "voice_to_update",
-             "name": "Updated Name",
-             "description": "Updated description",
-             "language": "en",
+            "id": "voice_to_update",
+            "name": "Updated Name",
+            "description": "Updated description",
+            "language": "en",
         }
         mock_cartesia.voices.update.return_value = updated_voice_data
 
-        result = tools.update_voice(
-            voice_id="voice_to_update",
-            name="Updated Name",
-            description="Updated description"
-        )
+        result = tools.update_voice(voice_id="voice_to_update", name="Updated Name", description="Updated description")
         result_data = json.loads(result)
 
         mock_cartesia.voices.update.assert_called_once_with(
-            id="voice_to_update",
-            name="Updated Name",
-            description="Updated description"
+            id="voice_to_update", name="Updated Name", description="Updated description"
         )
         assert result_data["id"] == "voice_to_update"
         assert result_data["name"] == "Updated Name"
@@ -690,23 +682,23 @@ class TestCartesiaTools:
         result = tools.localize_voice(
             voice_id="original_voice_id",
             language="es",
-            name="Localized Voice",           # Added
-            description="Test Localization", # Added
-            original_speaker_gender="female" # Added
+            name="Localized Voice",  # Added
+            description="Test Localization",  # Added
+            original_speaker_gender="female",  # Added
         )
         result_data = json.loads(result)
 
         mock_cartesia.voices.localize.assert_called_once_with(
-            voice_id="original_voice_id",      # Changed from id
+            voice_id="original_voice_id",  # Changed from id
             language="es",
             name="Localized Voice",
             description="Test Localization",
-            original_speaker_gender="female"
+            original_speaker_gender="female",
         )
         assert result_data["id"] == "localized_voice_id"
         assert result_data["language"] == "es"
 
-    def test_create_voice(self, mock_cartesia): # Renamed test method
+    def test_create_voice(self, mock_cartesia):  # Renamed test method
         """Test creating a voice from embedding."""
         # Enable the specific feature
         tools = CartesiaTools(voice_create_enabled=True)
@@ -715,24 +707,18 @@ class TestCartesiaTools:
             "name": "Embedding Voice",
             "language": "en",
         }
-        mock_embedding = [0.5] * 192 # Example embedding
+        mock_embedding = [0.5] * 192  # Example embedding
         mock_cartesia.voices.create.return_value = created_voice_data
 
         # Call the correct method name
         result = tools.create_voice(
-            name="Embedding Voice",
-            embedding=mock_embedding,
-            description="Voice from embedding",
-            language="en"
+            name="Embedding Voice", embedding=mock_embedding, description="Voice from embedding", language="en"
         )
         result_data = json.loads(result)
 
         # Assert the correct mock was called
         mock_cartesia.voices.create.assert_called_once_with(
-            name="Embedding Voice",
-            embedding=mock_embedding,
-            description="Voice from embedding",
-            language="en"
+            name="Embedding Voice", embedding=mock_embedding, description="Voice from embedding", language="en"
         )
         assert result_data["id"] == "new_voice_from_embedding"
         assert result_data["name"] == "Embedding Voice"
@@ -748,9 +734,9 @@ class TestCartesiaTools:
         with patch("builtins.open", return_value=mock_file_handle) as mock_opener:
             result = tools.change_voice(
                 voice_id="target_voice_id",
-                audio_file_path="original_audio.wav", # Still needed for open()
+                audio_file_path="original_audio.wav",  # Still needed for open()
                 output_format_container="mp3",
-                output_format_sample_rate=44100
+                output_format_sample_rate=44100,
             )
             result_data = json.loads(result)
 
@@ -759,7 +745,7 @@ class TestCartesiaTools:
             call_args = mock_cartesia.voice_changer.bytes.call_args[1]
 
             assert call_args["voice_id"] == "target_voice_id"
-            assert call_args["clip"] == mock_file_handle # SDK expects file handle
+            assert call_args["clip"] == mock_file_handle  # SDK expects file handle
             # Check output format args passed directly to SDK call
             assert call_args["output_format_container"] == "mp3"
             assert call_args["output_format_sample_rate"] == 44100
@@ -792,12 +778,12 @@ class TestCartesiaTools:
         # Use the file handle directly
         mock_file_handle = mock_open(read_data="col1,col2\nval1,val2").return_value
         # Patch open to return the handle
-        with patch("builtins.open", return_value=mock_file_handle) as mock_opener:
+        with patch("builtins.open", return_value=mock_file_handle):
             # Call create_dataset with the file handle
             result = tools.create_dataset(
                 name="New Dataset",
-                dataset_file=mock_file_handle, # Pass file handle
-                description="My new dataset"
+                dataset_file=mock_file_handle,  # Pass file handle
+                description="My new dataset",
                 # dataset_file_path argument is not used by create_dataset directly
             )
             result_data = json.loads(result)
@@ -808,7 +794,7 @@ class TestCartesiaTools:
             call_args = mock_cartesia.datasets.create.call_args[1]
             assert call_args["name"] == "New Dataset"
             assert call_args["description"] == "My new dataset"
-            assert call_args["file"] == mock_file_handle # Check file object was passed
+            assert call_args["file"] == mock_file_handle  # Check file object was passed
 
             assert result_data["id"] == "new_ds"
             assert result_data["name"] == "New Dataset"
@@ -834,18 +820,10 @@ class TestCartesiaTools:
         updated_dataset = {"id": "ds1", "name": "Updated Dataset", "description": "New Desc"}
         mock_cartesia.datasets.update.return_value = updated_dataset
 
-        result = tools.update_dataset(
-            dataset_id="ds1",
-            name="Updated Dataset",
-            description="New Desc"
-        )
+        result = tools.update_dataset(dataset_id="ds1", name="Updated Dataset", description="New Desc")
         result_data = json.loads(result)
 
-        mock_cartesia.datasets.update.assert_called_once_with(
-            id="ds1",
-            name="Updated Dataset",
-            description="New Desc"
-        )
+        mock_cartesia.datasets.update.assert_called_once_with(id="ds1", name="Updated Dataset", description="New Desc")
         assert result_data["id"] == "ds1"
         assert result_data["name"] == "Updated Dataset"
 
