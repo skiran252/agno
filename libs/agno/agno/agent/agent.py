@@ -1036,8 +1036,6 @@ class Agent:
                         except Exception as e:
                             log_warning(f"Failed to convert response to output model: {e}")
                     else:
-                        print("HERE", type(run_response.content))
-                        print("HERE", run_response.content)
                         log_warning("Something went wrong. Run response content is not a string")
                     return run_response
                 else:
@@ -1135,6 +1133,7 @@ class Agent:
         11. Save session to storage
         12. Save output to file if save_response_to_file is set
         """
+        
 
         # 1. Prepare the Agent for the run
         if isinstance(self.memory, AgentMemory):
@@ -2129,7 +2128,9 @@ class Agent:
                 try:
                     if "runs" in session.memory:
                         try:
-                            self.memory.runs = [AgentRun.model_validate(m) for m in session.memory["runs"]]
+                            self.memory.runs = []
+                            for run in session.memory["runs"]:
+                                self.memory.runs.append(AgentRun.model_validate(run))
                         except Exception as e:
                             log_warning(f"Failed to load runs from memory: {e}")
                     if "messages" in session.memory:

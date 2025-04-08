@@ -225,6 +225,7 @@ def get_async_playground_router(
             logger.debug(f"Continuing session: {session_id}")
         else:
             logger.debug("Creating new session")
+            session_id = str(uuid4())
 
         if monitor:
             agent.monitoring = True
