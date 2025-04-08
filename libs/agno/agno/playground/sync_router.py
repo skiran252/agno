@@ -391,7 +391,8 @@ def get_sync_playground_router(
 
         agent_session_dict = agent_session.to_dict()
         if agent_session.memory is not None:
-            if isinstance(agent_session.memory, Memory):
+            first_run = agent_session.memory.get("runs")[0]
+            if "content" in first_run:
                 agent_session_dict["runs"] =[]
                 for run in agent_session.memory.get("runs"):
                     first_user_message = None
@@ -754,7 +755,8 @@ def get_sync_playground_router(
 
         team_session_dict = team_session.to_dict()
         if team_session.memory is not None:
-            if isinstance(team_session.memory, Memory):
+            first_run = team_session.memory.get("runs")[0]
+            if "content" in first_run:
                 team_session_dict["runs"] =[]
                 for run in team_session.memory.get("runs"):
                     first_user_message = None
