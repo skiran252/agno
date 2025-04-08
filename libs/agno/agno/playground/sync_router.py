@@ -352,7 +352,7 @@ def get_sync_playground_router(
             return run_response.to_dict()
 
     @playground_router.get("/agents/{agent_id}/sessions")
-    def get_user_agent_sessions(agent_id: str, user_id: Optional[str] = Query(None, min_length=1)):
+    def get_agent_sessions(agent_id: str, user_id: Optional[str] = Query(None, min_length=1)):
         logger.debug(f"AgentSessionsRequest: {agent_id} {user_id}")
         agent = get_agent_by_id(agent_id, agents)
         if agent is None:
@@ -376,7 +376,7 @@ def get_sync_playground_router(
         return agent_sessions
 
     @playground_router.get("/agents/{agent_id}/sessions/{session_id}")
-    def get_user_agent_session(agent_id: str, session_id: str, user_id: Optional[str] = Query(None, min_length=1)):
+    def get_agent_session(agent_id: str, session_id: str, user_id: Optional[str] = Query(None, min_length=1)):
         logger.debug(f"AgentSessionsRequest: {agent_id} {user_id} {session_id}")
         agent = get_agent_by_id(agent_id, agents)
         if agent is None:
@@ -389,6 +389,21 @@ def get_sync_playground_router(
         if agent_session is None:
             return JSONResponse(status_code=404, content="Session not found.")
 
+        agent_session_dict = agent_session.to_dict()
+        if agent_session.memory is not None:
+            if isinstance(agent_session.memory, Memory):
+                agent_session_dict["runs"] =[]
+                for run in agent_session.memory.get("runs"):
+                    first_user_message = None
+                    for msg in run.get("messages", []):
+                        if msg.get("role") == "user":
+                            first_user_message = msg
+                            break
+                    agent_session_dict["runs"].append({
+                        "message": first_user_message,
+                        "response": run,
+                    })
+                    
         return agent_session
 
     @playground_router.post("/agents/{agent_id}/sessions/{session_id}/rename")
@@ -737,6 +752,20 @@ def get_sync_playground_router(
         if not team_session:
             raise HTTPException(status_code=404, detail="Session not found")
 
+        team_session_dict = team_session.to_dict()
+        if team_session.memory is not None:
+            if isinstance(team_session.memory, Memory):
+                team_session_dict["runs"] =[]
+                for run in team_session.memory.get("runs"):
+                    first_user_message = None
+                    for msg in run.get("messages", []):
+                        if msg.get("role") == "user":
+                            first_user_message = msg
+                            break
+                    team_session_dict["runs"].append({
+                        "message": first_user_message,
+                        "response": run,
+                    })
         return team_session
 
     @playground_router.post("/teams/{team_id}/sessions/{session_id}/rename")
