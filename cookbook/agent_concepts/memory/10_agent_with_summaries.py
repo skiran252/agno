@@ -30,30 +30,43 @@ agent = Agent(
 )
 
 agent.print_response(
-    "My name is John Doe and I like to hike in the mountains on weekends.", stream=True, user_id=john_doe_id, session_id=session_id_1
+    "My name is John Doe and I like to hike in the mountains on weekends.",
+    stream=True,
+    user_id=john_doe_id,
+    session_id=session_id_1,
 )
 
-agent.print_response("What are my hobbies?", stream=True, user_id=john_doe_id, session_id=session_id_1)
+agent.print_response(
+    "What are my hobbies?", stream=True, user_id=john_doe_id, session_id=session_id_1
+)
 
 
 memories = memory.get_user_memories(user_id=john_doe_id)
 print("John Doe's memories:")
 for i, m in enumerate(memories):
     print(f"{i}: {m.memory}")
-session_summary = memory.get_session_summary(user_id=john_doe_id, session_id=session_id_1)
-print(
-    f"Session summary: {session_summary.summary}\n"
+session_summary = memory.get_session_summary(
+    user_id=john_doe_id, session_id=session_id_1
 )
+print(f"Session summary: {session_summary.summary}\n")
 
 
 session_id_2 = "1002"
 mark_gonzales_id = "mark@example.com"
 
 agent.print_response(
-    "My name is Mark Gonzales and I like anime and video games.", stream=True, user_id=mark_gonzales_id, session_id=session_id_2
+    "My name is Mark Gonzales and I like anime and video games.",
+    stream=True,
+    user_id=mark_gonzales_id,
+    session_id=session_id_2,
 )
 
-agent.print_response("What are my hobbies?", stream=True, user_id=mark_gonzales_id, session_id=session_id_2)
+agent.print_response(
+    "What are my hobbies?",
+    stream=True,
+    user_id=mark_gonzales_id,
+    session_id=session_id_2,
+)
 
 
 memories = memory.get_user_memories(user_id=mark_gonzales_id)

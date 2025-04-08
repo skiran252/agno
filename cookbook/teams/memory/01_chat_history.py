@@ -6,11 +6,12 @@ from agno.team.team import Team
 from agno.tools.duckduckgo import DuckDuckGoTools
 from agno.tools.yfinance import YFinanceTools
 from pydantic import BaseModel
-from utils import print_chat_history
 from rich.pretty import pprint
+from utils import print_chat_history
 
 # This memory is shared by all the agents in the team
 memory = Memory(model=Gemini(id="gemini-2.0-flash-exp"))
+
 
 class StockAnalysis(BaseModel):
     symbol: str
@@ -57,14 +58,18 @@ team = Team(
 )
 
 # -*- Create a run
-team.print_response("Write a report on the Apple stock.", session_id=session_id, user_id=user_id)
+team.print_response(
+    "Write a report on the Apple stock.", session_id=session_id, user_id=user_id
+)
 
 # -*- Print the messages in the memory
 session_run = memory.runs[session_id][-1]
 print_chat_history(session_run)
 
 # -*- Ask a follow up question that continues the conversation
-team.print_response("Pull up the previous report again.", session_id=session_id, user_id=user_id)
+team.print_response(
+    "Pull up the previous report again.", session_id=session_id, user_id=user_id
+)
 # -*- Print the messages in the memory
 session_run = memory.runs[session_id][-1]
 print_chat_history(session_run)

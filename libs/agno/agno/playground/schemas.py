@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional, Union
+from uuid import uuid4
 
 from fastapi import UploadFile
 from pydantic import BaseModel
@@ -33,6 +34,7 @@ class AgentGetResponse(BaseModel):
     @classmethod
     def from_agent(self, agent: Agent) -> "AgentGetResponse":
         if agent.memory:
+            memory_dict: Optional[Dict[str, Any]] = {}
             if isinstance(agent.memory, AgentMemory) and agent.memory.db:
                 memory_dict = {"name": agent.memory.db.__class__.__name__}
             elif isinstance(agent.memory, Memory) and agent.memory.memory_db:
@@ -52,6 +54,7 @@ class AgentGetResponse(BaseModel):
                 memory_dict = None
         else:
             memory_dict = None
+        tools = agent.get_tools(session_id=str(uuid4()))
         return AgentGetResponse(
             agent_id=agent.agent_id,
             name=agent.name,
@@ -61,7 +64,7 @@ class AgentGetResponse(BaseModel):
                 provider=agent.model.provider or agent.model.__class__.__name__ if agent.model else None,
             ),
             add_context=agent.add_context,
-            tools=format_tools(agent.get_tools()) if agent.get_tools() else None,
+            tools=format_tools(tools) if tools else None,
             memory=memory_dict,
             storage={"name": agent.storage.__class__.__name__} if agent.storage else None,
             knowledge={"name": agent.knowledge.__class__.__name__} if agent.knowledge else None,
@@ -91,10 +94,12 @@ class AgentSessionsResponse(BaseModel):
     session_name: Optional[str] = None
     created_at: Optional[int] = None
 
+
 class MemoryResponse(BaseModel):
     memory: str
     topics: Optional[List[str]] = None
     last_updated: Optional[datetime] = None
+
 
 class WorkflowRenameRequest(BaseModel):
     name: str
@@ -153,6 +158,7 @@ class TeamGetResponse(BaseModel):
     def from_team(self, team: Team) -> "TeamGetResponse":
         import json
 
+        memory_dict: Optional[Dict[str, Any]] = {}
         if isinstance(team.memory, Memory):
             memory_dict = {"name": "Memory"}
             if team.memory.model is not None:

@@ -13,7 +13,6 @@ from agno.tools.duckduckgo import DuckDuckGoTools
 from agno.tools.exa import ExaTools
 from agno.tools.yfinance import YFinanceTools
 
-
 db_url = "postgresql+psycopg://ai:ai@localhost:5532/ai"
 
 memory_db = PostgresMemoryDb(table_name="memory", db_url=db_url)

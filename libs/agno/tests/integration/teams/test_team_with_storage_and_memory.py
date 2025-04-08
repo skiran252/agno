@@ -1,7 +1,8 @@
 import os
 import tempfile
-import pytest
 import uuid
+
+import pytest
 
 from agno.agent import Agent
 from agno.memory_v2.db.memory.sqlite import SqliteMemoryDb
@@ -17,9 +18,9 @@ def temp_storage_db_file():
     """Create a temporary SQLite database file for team storage testing."""
     with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as temp_file:
         db_path = temp_file.name
-    
+
     yield db_path
-    
+
     # Clean up the temporary file after the test
     if os.path.exists(db_path):
         os.unlink(db_path)
@@ -30,9 +31,9 @@ def temp_memory_db_file():
     """Create a temporary SQLite database file for memory testing."""
     with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as temp_file:
         db_path = temp_file.name
-    
+
     yield db_path
-    
+
     # Clean up the temporary file after the test
     if os.path.exists(db_path):
         os.unlink(db_path)
@@ -66,7 +67,7 @@ def memory(memory_db):
 def web_agent():
     """Create a web agent for testing."""
     from agno.tools.duckduckgo import DuckDuckGoTools
-    
+
     return Agent(
         name="Web Agent",
         model=OpenAIChat(id="gpt-4o-mini"),
@@ -79,7 +80,7 @@ def web_agent():
 def finance_agent():
     """Create a finance agent for testing."""
     from agno.tools.yfinance import YFinanceTools
-    
+
     return Agent(
         name="Finance Agent",
         model=OpenAIChat(id="gpt-4o-mini"),
@@ -91,11 +92,7 @@ def finance_agent():
 @pytest.fixture
 def analysis_agent():
     """Create an analysis agent for testing."""
-    return Agent(
-        name="Analysis Agent", 
-        model=OpenAIChat(id="gpt-4o-mini"), 
-        role="Analyze data and provide insights"
-    )
+    return Agent(name="Analysis Agent", model=OpenAIChat(id="gpt-4o-mini"), role="Analyze data and provide insights")
 
 
 @pytest.fixture
@@ -129,69 +126,49 @@ async def test_multi_user_multi_session_route_team(route_team, team_storage, mem
     memory.clear()
 
     # Team interaction with user 1 - Session 1
-    await route_team.arun(
-        "What is the current stock price of AAPL?", 
-        user_id=user_1_id, 
-        session_id=user_1_session_1_id
-    )
-    await route_team.arun(
-        "What are the latest news about Apple?", 
-        user_id=user_1_id, 
-        session_id=user_1_session_1_id
-    )
+    await route_team.arun("What is the current stock price of AAPL?", user_id=user_1_id, session_id=user_1_session_1_id)
+    await route_team.arun("What are the latest news about Apple?", user_id=user_1_id, session_id=user_1_session_1_id)
 
     # Team interaction with user 1 - Session 2
     await route_team.arun(
-        "Compare the stock performance of AAPL with recent tech industry news", 
-        user_id=user_1_id, 
-        session_id=user_1_session_2_id
+        "Compare the stock performance of AAPL with recent tech industry news",
+        user_id=user_1_id,
+        session_id=user_1_session_2_id,
     )
 
     # Team interaction with user 2
+    await route_team.arun("What is the current stock price of MSFT?", user_id=user_2_id, session_id=user_2_session_1_id)
     await route_team.arun(
-        "What is the current stock price of MSFT?", 
-        user_id=user_2_id, 
-        session_id=user_2_session_1_id
-    )
-    await route_team.arun(
-        "What are the latest news about Microsoft?", 
-        user_id=user_2_id, 
-        session_id=user_2_session_1_id
+        "What are the latest news about Microsoft?", user_id=user_2_id, session_id=user_2_session_1_id
     )
 
     # Team interaction with user 3
     await route_team.arun(
-        "What is the current stock price of GOOGL?", 
-        user_id=user_3_id, 
-        session_id=user_3_session_1_id
+        "What is the current stock price of GOOGL?", user_id=user_3_id, session_id=user_3_session_1_id
     )
-    await route_team.arun(
-        "What are the latest news about Google?", 
-        user_id=user_3_id, 
-        session_id=user_3_session_1_id
-    )
-    
+    await route_team.arun("What are the latest news about Google?", user_id=user_3_id, session_id=user_3_session_1_id)
+
     # Continue the conversation with user 1
     await route_team.arun(
-        "Based on the information you have, what stock would you recommend investing in?", 
-        user_id=user_1_id, 
-        session_id=user_1_session_1_id
+        "Based on the information you have, what stock would you recommend investing in?",
+        user_id=user_1_id,
+        session_id=user_1_session_1_id,
     )
 
     # Verify storage DB has the right sessions
     all_session_ids = team_storage.get_all_session_ids()
     assert len(all_session_ids) == 4  # 4 sessions total
-    
+
     # Check that each user has the expected sessions
     user_1_sessions = team_storage.get_all_sessions(user_id=user_1_id)
     assert len(user_1_sessions) == 2
     assert user_1_session_1_id in [session.session_id for session in user_1_sessions]
     assert user_1_session_2_id in [session.session_id for session in user_1_sessions]
-    
+
     user_2_sessions = team_storage.get_all_sessions(user_id=user_2_id)
     assert len(user_2_sessions) == 1
     assert user_2_session_1_id in [session.session_id for session in user_2_sessions]
-    
+
     user_3_sessions = team_storage.get_all_sessions(user_id=user_3_id)
     assert len(user_3_sessions) == 1
     assert user_3_session_1_id in [session.session_id for session in user_3_sessions]

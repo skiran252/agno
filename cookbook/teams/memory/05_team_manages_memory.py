@@ -7,6 +7,7 @@ Steps:
 """
 
 import asyncio
+
 from agno.agent import Agent
 from agno.memory_v2.memory import Memory
 from agno.models.google.gemini import Gemini
@@ -37,9 +38,7 @@ team = Team(
         table_name="team_sessions", db_file="tmp/persistent_memory.db"
     ),
     members=[web_searcher],
-    instructions=[
-        "You can search the web for information."
-    ],
+    instructions=["You can search the web for information."],
     memory=memory,
     # Enable the team to manage the memory
     enable_agentic_memory=True,
@@ -61,7 +60,6 @@ if __name__ == "__main__":
             user_id=user_id,
         )
     )
-
 
     asyncio.run(
         team.aprint_response(

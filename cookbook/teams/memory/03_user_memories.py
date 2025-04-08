@@ -79,7 +79,12 @@ session_id = "stock_team_session_1"
 user_id = "john_billings"
 
 # -*- Share personal information
-team.print_response("My name is john billings and I live in nyc.", stream=True, session_id=session_id, user_id=user_id)
+team.print_response(
+    "My name is john billings and I live in nyc.",
+    stream=True,
+    session_id=session_id,
+    user_id=user_id,
+)
 
 session_run = memory.runs[session_id][-1]
 # -*- Print chat history
@@ -88,7 +93,12 @@ print_chat_history(session_run)
 print_team_memory(user_id, memory.get_user_memories(user_id))
 
 # -*- Share personal information
-team.print_response("What is the price of apple stock?", stream=True, session_id=session_id, user_id=user_id)
+team.print_response(
+    "What is the price of apple stock?",
+    stream=True,
+    session_id=session_id,
+    user_id=user_id,
+)
 
 session_run = memory.runs[session_id][-1]
 # -*- Print chat history
@@ -106,5 +116,3 @@ session_run = memory.runs[session_id][-1]
 print_chat_history(session_run)
 # -*- Print team memory
 print_team_memory(user_id, memory.get_user_memories(user_id))
-
-

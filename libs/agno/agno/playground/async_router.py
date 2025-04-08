@@ -1,8 +1,9 @@
 import json
 from dataclasses import asdict
 from io import BytesIO
-from typing import AsyncGenerator, List, Optional, cast
+from typing import Any, AsyncGenerator, Dict, List, Optional, cast
 from uuid import uuid4
+
 from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse
 
@@ -35,6 +36,7 @@ from agno.playground.schemas import (
     WorkflowSessionResponse,
     WorkflowsGetResponse,
 )
+from agno.playground.utils import process_audio, process_document, process_image, process_video
 from agno.run.response import RunEvent
 from agno.run.team import TeamRunResponse
 from agno.storage.session.agent import AgentSession
@@ -44,7 +46,6 @@ from agno.team.team import Team
 from agno.utils.log import logger
 from agno.workflow.workflow import Workflow
 
-from agno.playground.utils import process_image, process_audio, process_video, process_document
 
 async def chat_response_streamer(
     agent: Agent,
@@ -76,6 +77,7 @@ async def chat_response_streamer(
         )
         yield error_response.to_json()
         return
+
 
 async def team_chat_response_streamer(
     team: Team,
@@ -110,6 +112,7 @@ async def team_chat_response_streamer(
         yield error_response.to_json()
         return
 
+
 def get_async_playground_router(
     agents: Optional[List[Agent]] = None, workflows: Optional[List[Workflow]] = None, teams: Optional[List[Team]] = None
 ) -> APIRouter:
@@ -143,7 +146,7 @@ def get_async_playground_router(
             return agent_list
 
         for agent in agents:
-            agent_tools = agent.get_tools()
+            agent_tools = agent.get_tools(session_id=str(uuid4()))
             formatted_tools = format_tools(agent_tools)
 
             name = agent.model.name or agent.model.__class__.__name__ if agent.model else None
@@ -164,6 +167,7 @@ def get_async_playground_router(
                 provider = ""
 
             if agent.memory:
+                memory_dict: Optional[Dict[str, Any]] = {}
                 if isinstance(agent.memory, AgentMemory) and agent.memory.db:
                     memory_dict = {"name": agent.memory.db.__class__.__name__}
                 elif isinstance(agent.memory, Memory) and agent.memory.memory_db:
@@ -205,7 +209,6 @@ def get_async_playground_router(
 
         return agent_list
 
-
     @playground_router.post("/agents/{agent_id}/runs")
     async def create_agent_run(
         agent_id: str,
@@ -241,14 +244,14 @@ def get_async_playground_router(
                 logger.info(f"Processing file: {file.content_type}")
                 if file.content_type in ["image/png", "image/jpeg", "image/jpg", "image/webp"]:
                     try:
-                        base64_image = await process_image(file)
+                        base64_image = process_image(file)
                         base64_images.append(base64_image)
                     except Exception as e:
                         logger.error(f"Error processing image {file.filename}: {e}")
                         continue
                 elif file.content_type in ["audio/wav", "audio/mp3", "audio/mpeg"]:
                     try:
-                        base64_audio = await process_audio(file)
+                        base64_audio = process_audio(file)
                         base64_audios.append(base64_audio)
                     except Exception as e:
                         logger.error(f"Error processing audio {file.filename}: {e}")
@@ -267,7 +270,7 @@ def get_async_playground_router(
                     "video/3gpp",
                 ]:
                     try:
-                        base64_video = await process_video(file)
+                        base64_video = process_video(file)
                         base64_videos.append(base64_video)
                     except Exception as e:
                         logger.error(f"Error processing video {file.filename}: {e}")
@@ -394,21 +397,25 @@ def get_async_playground_router(
 
         agent_session_dict = agent_session.to_dict()
         if agent_session.memory is not None:
-            first_run = agent_session.memory.get("runs")[0]
-            # This is how we know it is a RunResponse
-            if "content" in first_run:
-                agent_session_dict["runs"] = []
-                
-                for run in agent_session.memory.get("runs"):
-                    first_user_message = None
-                    for msg in run.get("messages", []):
-                        if msg.get("role") == "user":
-                            first_user_message = msg
-                            break
-                    agent_session_dict["runs"].append({
-                        "message": first_user_message,
-                        "response": run,
-                    })
+            runs = agent_session.memory.get("runs")
+            if runs is not None:
+                first_run = runs[0]
+                # This is how we know it is a RunResponse
+                if "content" in first_run:
+                    agent_session_dict["runs"] = []
+
+                    for run in runs:
+                        first_user_message = None
+                        for msg in run.get("messages", []):
+                            if msg.get("role") == "user":
+                                first_user_message = msg
+                                break
+                        agent_session_dict["runs"].append(
+                            {
+                                "message": first_user_message,
+                                "response": run,
+                            }
+                        )
         return agent_session_dict
 
     @playground_router.post("/agents/{agent_id}/sessions/{session_id}/rename")
@@ -447,7 +454,7 @@ def get_async_playground_router(
         return JSONResponse(status_code=404, content="Session not found.")
 
     @playground_router.get("/agents/{agent_id}/memories")
-    async def get_agent_memories(agent_id: str, user_id: Optional[str] = Query(None, min_length=1)):
+    async def get_agent_memories(agent_id: str, user_id: str = Query(..., min_length=1)):
         agent = get_agent_by_id(agent_id, agents)
         if agent is None:
             return JSONResponse(status_code=404, content="Agent not found.")
@@ -457,7 +464,10 @@ def get_async_playground_router(
 
         if isinstance(agent.memory, Memory):
             memories = agent.memory.get_user_memories(user_id=user_id)
-            return [MemoryResponse(memory=memory.memory, topics=memory.topics, last_updated=memory.last_updated) for memory in memories]
+            return [
+                MemoryResponse(memory=memory.memory, topics=memory.topics, last_updated=memory.last_updated)
+                for memory in memories
+            ]
         else:
             return []
 
@@ -628,6 +638,7 @@ def get_async_playground_router(
             logger.debug(f"Continuing session: {session_id}")
         else:
             logger.debug("Creating new session")
+            session_id = str(uuid4())
 
         if monitor:
             team.monitoring = True
@@ -643,14 +654,14 @@ def get_async_playground_router(
             for file in files:
                 if file.content_type in ["image/png", "image/jpeg", "image/jpg", "image/webp"]:
                     try:
-                        base64_image = await process_image(file)
+                        base64_image = process_image(file)
                         base64_images.append(base64_image)
                     except Exception as e:
                         logger.error(f"Error processing image {file.filename}: {e}")
                         continue
                 elif file.content_type in ["audio/wav", "audio/mp3", "audio/mpeg"]:
                     try:
-                        base64_audio = await process_audio(file)
+                        base64_audio = process_audio(file)
                         base64_audios.append(base64_audio)
                     except Exception as e:
                         logger.error(f"Error processing audio {file.filename}: {e}")
@@ -669,7 +680,7 @@ def get_async_playground_router(
                     "video/3gpp",
                 ]:
                     try:
-                        base64_video = await process_video(file)
+                        base64_video = process_video(file)
                         base64_videos.append(base64_video)
                     except Exception as e:
                         logger.error(f"Error processing video {file.filename}: {e}")
@@ -681,7 +692,7 @@ def get_async_playground_router(
                     "text/plain",
                     "application/json",
                 ]:
-                    document_file = await process_document(file)
+                    document_file = process_document(file)
                     if document_file is not None:
                         document_files.append(document_file)
                 else:
@@ -760,21 +771,25 @@ def get_async_playground_router(
 
         team_session_dict = team_session.to_dict()
         if team_session.memory is not None:
-            first_run = team_session.memory.get("runs")[0]
-            # This is how we know it is a RunResponse
-            if "content" in first_run:
-                team_session_dict["runs"] =[]
-                for run in team_session.memory.get("runs"):
-                    first_user_message = None
-                    for msg in run.get("messages", []):
-                        if msg.get("role") == "user":
-                            first_user_message = msg
-                            break
-                    team_session_dict["runs"].append({
-                        "message": first_user_message,
-                        "response": run,
-                    })
-                
+            runs = team_session.memory.get("runs")
+            if runs is not None:
+                first_run = runs[0]
+                # This is how we know it is a RunResponse
+                if "content" in first_run:
+                    team_session_dict["runs"] = []
+                    for run in runs:
+                        first_user_message = None
+                        for msg in run.get("messages", []):
+                            if msg.get("role") == "user":
+                                first_user_message = msg
+                                break
+                        team_session_dict["runs"].append(
+                            {
+                                "message": first_user_message,
+                                "response": run,
+                            }
+                        )
+
         return team_session_dict
 
     @playground_router.post("/teams/{team_id}/sessions/{session_id}/rename")
@@ -813,7 +828,7 @@ def get_async_playground_router(
         raise HTTPException(status_code=404, detail="Session not found")
 
     @playground_router.get("/team/{team_id}/memories")
-    async def get_team_memories(team_id: str, user_id: Optional[str] = Query(None, min_length=1)):
+    async def get_team_memories(team_id: str, user_id: str = Query(..., min_length=1)):
         team = get_team_by_id(team_id, teams)
         if team is None:
             return JSONResponse(status_code=404, content="Teem not found.")
@@ -823,7 +838,10 @@ def get_async_playground_router(
 
         if isinstance(team.memory, Memory):
             memories = team.memory.get_user_memories(user_id=user_id)
-            return [MemoryResponse(memory=memory.memory, topics=memory.topics, last_updated=memory.last_updated) for memory in memories]
+            return [
+                MemoryResponse(memory=memory.memory, topics=memory.topics, last_updated=memory.last_updated)
+                for memory in memories
+            ]
         else:
             return []
 

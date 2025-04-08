@@ -50,7 +50,7 @@ team = Team(
     instructions=[
         "You can search the stock market for information about a particular company's stock.",
         "You can also search the web for wider company information.",
-        "Always add ALL stock or company information you get from team members to the shared team context."
+        "Always add ALL stock or company information you get from team members to the shared team context.",
     ],
     memory=memory,
     enable_agentic_context=True,
@@ -79,4 +79,7 @@ team.print_response(
 
 print("Team Context: ", memory.team_context[session_id].text)
 for interaction in memory.team_context[session_id].member_interactions:
-    print("Member Interactions: ", f"{interaction.member_name}: {interaction.task} - {interaction.response.content}")
+    print(
+        "Member Interactions: ",
+        f"{interaction.member_name}: {interaction.task} - {interaction.response.content}",
+    )

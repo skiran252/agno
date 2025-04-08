@@ -16,7 +16,6 @@ from agno.team.team import Team
 from agno.tools.yfinance import YFinanceTools
 from utils import print_chat_history
 
-
 memory = Memory(model=OpenAIChat("gpt-4o"))
 
 stock_searcher = Agent(
@@ -65,7 +64,9 @@ team = Team(
 session_id = "stock_team_session_1"
 
 # -*- Create a run
-team.print_response("What is the current price of Apple stock?", stream=True, session_id=session_id)
+team.print_response(
+    "What is the current price of Apple stock?", stream=True, session_id=session_id
+)
 
 # -*- Print the chat history
 session_run = memory.runs[session_id][-1]

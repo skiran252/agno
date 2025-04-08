@@ -7,6 +7,7 @@ Steps:
 """
 
 import asyncio
+
 from agno.agent import Agent
 from agno.memory_v2.memory import Memory
 from agno.models.openai import OpenAIChat
@@ -35,9 +36,7 @@ team = Team(
         table_name="team_sessions", db_file="tmp/persistent_memory.db"
     ),
     members=[web_searcher],
-    instructions=[
-        "You can search the web for information."
-    ],
+    instructions=["You can search the web for information."],
     memory=memory,
     # Enable the team to make session summaries
     create_session_summaries=True,
@@ -70,8 +69,9 @@ if __name__ == "__main__":
         )
     )
 
-
-    session_summary = memory.get_session_summary(user_id=user_id, session_id=session_id_1)
+    session_summary = memory.get_session_summary(
+        user_id=user_id, session_id=session_id_1
+    )
     print("Session Summary: ", session_summary.summary)
 
     session_id_2 = "session_2"
@@ -86,5 +86,7 @@ if __name__ == "__main__":
         )
     )
 
-    session_summary = memory.get_session_summary(user_id=user_id, session_id=session_id_2)
+    session_summary = memory.get_session_summary(
+        user_id=user_id, session_id=session_id_2
+    )
     print("Session Summary: ", session_summary.summary)

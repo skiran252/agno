@@ -42,7 +42,7 @@ class MongoMemoryDb(MemoryDb):
         self.db_name: str = db_name
         self.db: Database = self._client[self.db_name]
         self.collection: Collection = self.db[self.collection_name]
-        
+
     def __str__(self) -> str:
         return f"MongoMemoryDb(collection_name={self.collection_name}, db_name={self.db_name})"
 

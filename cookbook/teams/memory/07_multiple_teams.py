@@ -7,6 +7,7 @@ Steps:
 """
 
 import asyncio
+
 from agno.agent import Agent
 from agno.memory_v2.db.memory.sqlite import SqliteMemoryDb
 from agno.memory_v2.memory import Memory
@@ -45,9 +46,7 @@ chat_team = Team(
         table_name="team_sessions", db_file="tmp/persistent_memory.db"
     ),
     members=[web_searcher],
-    instructions=[
-        "You can search the web for information."
-    ],
+    instructions=["You can search the web for information."],
     memory=memory,
     create_user_memories=True,
     show_tool_calls=True,
@@ -103,7 +102,6 @@ if __name__ == "__main__":
             user_id=user_id,
         )
     )
-
 
     asyncio.run(
         multi_language_team.aprint_response(

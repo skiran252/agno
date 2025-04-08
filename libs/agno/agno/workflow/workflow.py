@@ -199,7 +199,7 @@ class Workflow:
                 if isinstance(self.memory, WorkflowMemory):
                     self.memory.add_run(WorkflowRun(input=self.run_input, response=self.run_response))
                 elif isinstance(self.memory, Memory):
-                    self.memory.add_run(session_id=self.session_id, run=self.run_response)
+                    self.memory.add_run(session_id=self.session_id, run=self.run_response)  # type: ignore
                 # Write this run to the database
                 self.write_to_storage()
                 log_debug(f"Workflow Run End: {self.run_id}", center=True)
@@ -220,7 +220,7 @@ class Workflow:
             if isinstance(self.memory, WorkflowMemory):
                 self.memory.add_run(WorkflowRun(input=self.run_input, response=self.run_response))
             elif isinstance(self.memory, Memory):
-                self.memory.add_run(session_id=self.session_id, run=self.run_response)
+                self.memory.add_run(session_id=self.session_id, run=self.run_response)  # type: ignore
             # Write this run to the database
             self.write_to_storage()
             log_debug(f"Workflow Run End: {self.run_id}", center=True)

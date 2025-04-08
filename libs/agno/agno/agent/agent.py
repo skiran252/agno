@@ -464,7 +464,6 @@ class Agent:
         log_debug(f"Agent ID: {self.agent_id}", center=True)
         return self.agent_id
 
-
     def set_debug(self) -> None:
         if self.debug_mode or getenv("AGNO_DEBUG", "false").lower() == "true":
             self.debug_mode = True
@@ -867,7 +866,7 @@ class Agent:
             # Add AgentRun to memory
             self.memory.add_run(session_id=session_id, run=self.run_response)
 
-            self._make_memories_and_summaries(run_messages, session_id, user_id, messages)
+            self._make_memories_and_summaries(run_messages, session_id, user_id, messages)  # type: ignore
 
         # Yield UpdatingMemory event
         if self.stream_intermediate_steps:
@@ -987,8 +986,6 @@ class Agent:
         session_id = cast(str, session_id)
 
         log_debug(f"Session ID: {session_id}", center=True)
-
-
 
         last_exception = None
         num_attempts = retries + 1
@@ -1133,7 +1130,6 @@ class Agent:
         11. Save session to storage
         12. Save output to file if save_response_to_file is set
         """
-        
 
         # 1. Prepare the Agent for the run
         if isinstance(self.memory, AgentMemory):
@@ -1451,7 +1447,7 @@ class Agent:
             # Add AgentRun to memory
             self.memory.add_run(session_id=session_id, run=self.run_response)
 
-            await self._amake_memories_and_summaries(run_messages, session_id, user_id, messages)
+            await self._amake_memories_and_summaries(run_messages, session_id, user_id, messages)  # type: ignore
 
         # Yield UpdatingMemory event
         if self.stream_intermediate_steps:
@@ -1534,7 +1530,6 @@ class Agent:
         session_id = cast(str, session_id)
 
         log_debug(f"Session ID: {session_id}", center=True)
-
 
         last_exception = None
         num_attempts = retries + 1
@@ -1682,8 +1677,15 @@ class Agent:
             rr.created_at = created_at
         return rr
 
-    def _make_memories_and_summaries(self, run_messages: RunMessages, session_id: str, user_id: Optional[str] = None, messages: Optional[List[Message]] = None) -> None:
+    def _make_memories_and_summaries(
+        self,
+        run_messages: RunMessages,
+        session_id: str,
+        user_id: Optional[str] = None,
+        messages: Optional[List[Message]] = None,
+    ) -> None:
         session_messages: List[Message] = []
+        self.memory = cast(Memory, self.memory)
         if self.create_user_memories and run_messages.user_message is not None:
             self.memory.create_user_memory(message=run_messages.user_message.get_content_string(), user_id=user_id)
 
@@ -1711,7 +1713,6 @@ class Agent:
                 else:
                     log_warning("Unable to add messages to memory")
 
-
         # Update the session summary if needed
         if self.create_session_summaries:
             self.memory.create_session_summary(session_id=session_id, user_id=user_id)
@@ -1719,10 +1720,19 @@ class Agent:
         # Calculate session metrics
         self.session_metrics = self.calculate_session_metrics(session_messages)
 
-    async def _amake_memories_and_summaries(self, run_messages: RunMessages, session_id: str, user_id: Optional[str] = None, messages: Optional[List[Message]] = None) -> None:
+    async def _amake_memories_and_summaries(
+        self,
+        run_messages: RunMessages,
+        session_id: str,
+        user_id: Optional[str] = None,
+        messages: Optional[List[Message]] = None,
+    ) -> None:
+        self.memory = cast(Memory, self.memory)
         session_messages: List[Message] = []
         if self.create_user_memories and run_messages.user_message is not None:
-            await self.memory.acreate_user_memory(message=run_messages.user_message.get_content_string(), user_id=user_id)
+            await self.memory.acreate_user_memory(
+                message=run_messages.user_message.get_content_string(), user_id=user_id
+            )
 
             # TODO: Possibly do both of these in one step
             if messages is not None and len(messages) > 0:
@@ -1756,7 +1766,7 @@ class Agent:
         self.session_metrics = self.calculate_session_metrics(session_messages)
 
     def get_tools(
-        self, async_mode: bool = False, user_id: Optional[str] = None, session_id: Optional[str] = None
+        self, session_id: str, async_mode: bool = False, user_id: Optional[str] = None
     ) -> Optional[List[Union[Toolkit, Callable, Function, Dict]]]:
         agent_tools: List[Union[Toolkit, Callable, Function, Dict]] = []
 
@@ -1794,12 +1804,12 @@ class Agent:
         return agent_tools
 
     def add_tools_to_model(
-        self, model: Model, async_mode: bool = False, user_id: Optional[str] = None, session_id: Optional[str] = None
+        self, model: Model, session_id: str, async_mode: bool = False, user_id: Optional[str] = None
     ) -> None:
         # Skip if functions_for_model is not None
         if self._functions_for_model is None or self._tools_for_model is None:
             # Get Agent tools
-            agent_tools = self.get_tools(async_mode=async_mode, user_id=user_id, session_id=session_id)
+            agent_tools = self.get_tools(session_id=session_id, async_mode=async_mode, user_id=user_id)
             if agent_tools is not None and len(agent_tools) > 0:
                 log_debug("Processing tools for model")
 
@@ -1876,9 +1886,7 @@ class Agent:
                 # Set functions on the model
                 model.set_functions(functions=self._functions_for_model)
 
-    def update_model(
-        self, async_mode: bool = False, user_id: Optional[str] = None, session_id: Optional[str] = None
-    ) -> None:
+    def update_model(self, session_id: str, async_mode: bool = False, user_id: Optional[str] = None) -> None:
         # Use the default Model (OpenAIChat) if no model is provided
         if self.model is None:
             try:
@@ -1930,7 +1938,7 @@ class Agent:
             log_debug(f"Structured outputs: {self.model.structured_outputs}")
 
         # Add tools to the Model
-        self.add_tools_to_model(model=self.model, async_mode=async_mode, user_id=user_id, session_id=session_id)
+        self.add_tools_to_model(model=self.model, session_id=session_id, async_mode=async_mode, user_id=user_id)
 
         # Set show_tool_calls on the Model
         if self.show_tool_calls is not None:
@@ -2017,7 +2025,7 @@ class Agent:
             else:
                 self.memory = cast(Memory, self.memory)
                 # We fake the structure on storage, to maintain the interface with the legacy implementation
-                run_responses = self.memory.runs[session_id]
+                run_responses = self.memory.runs[session_id]  # type: ignore
                 memory_dict = {"runs": [rr.to_dict() for rr in run_responses]}
         else:
             memory_dict = None
@@ -2170,7 +2178,7 @@ class Agent:
                         log_warning(f"Failed to load runs from memory: {e}")
                 if "memories" in session.memory:
                     from agno.memory_v2.memory import UserMemory as UserMemoryV2
-            
+
                     try:
                         self.memory.memories = {
                             user_id: {
@@ -2182,7 +2190,7 @@ class Agent:
                         log_warning(f"Failed to load user memories: {e}")
                 if "summaries" in session.memory:
                     from agno.memory_v2.memory import SessionSummary as SessionSummaryV2
-            
+
                     try:
                         self.memory.summaries = {
                             user_id: {
@@ -2260,7 +2268,7 @@ class Agent:
         if self.storage is not None:
             # Load existing session if session_id is provided
             log_debug(f"Reading AgentSession: {self.session_id}")
-            self.read_from_storage( session_id=self.session_id, user_id=self.user_id)  # type: ignore
+            self.read_from_storage(session_id=self.session_id, user_id=self.user_id)  # type: ignore
 
             # Create a new session if it does not exist
             if self.agent_session is None:
@@ -3201,6 +3209,9 @@ class Agent:
     def rename(self, name: str) -> None:
         """Rename the Agent and save to storage"""
 
+        if self.session_id is None:
+            raise Exception("Session ID is not set")
+
         # -*- Read from storage
         self.read_from_storage(user_id=self.user_id, session_id=self.session_id)  # type: ignore
         # -*- Rename Agent
@@ -3213,6 +3224,9 @@ class Agent:
     def rename_session(self, session_name: str) -> None:
         """Rename the current session and save to storage"""
 
+        if self.session_id is None:
+            raise Exception("Session ID is not set")
+
         # -*- Read from storage
         self.read_from_storage(user_id=self.user_id, session_id=self.session_id)
         # -*- Rename session
@@ -3222,7 +3236,7 @@ class Agent:
         # -*- Log Agent session
         self._log_agent_session(user_id=self.user_id, session_id=self.session_id)  # type: ignore
 
-    def generate_session_name(self, session_id: Optional[str] = None) -> str:
+    def generate_session_name(self, session_id: str) -> str:
         """Generate a name for the session using the first 6 messages from the memory"""
 
         if self.model is None:
@@ -3265,6 +3279,9 @@ class Agent:
 
     def auto_rename_session(self) -> None:
         """Automatically rename the session and save to storage"""
+
+        if self.session_id is None:
+            raise Exception("Session ID is not set")
 
         # -*- Read from storage
         self.read_from_storage(user_id=self.user_id, session_id=self.session_id)  # type: ignore
@@ -3825,13 +3842,13 @@ class Agent:
 
             history: List[Dict[str, Any]] = []
             if isinstance(self.memory, AgentMemory):
-                all_chats = self.memory.get_message_pairs()
+                agent_chats = self.memory.get_message_pairs()
 
-                if len(all_chats) == 0:
+                if len(agent_chats) == 0:
                     return ""
 
                 chats_added = 0
-                for chat in all_chats[::-1]:
+                for chat in agent_chats[::-1]:
                     history.insert(0, chat[1].to_dict())
                     history.insert(0, chat[0].to_dict())
                     chats_added += 1
@@ -3844,7 +3861,7 @@ class Agent:
                 if len(all_chats) == 0:
                     return ""
 
-                for chat in all_chats[::-1]:
+                for chat in all_chats[::-1]:  # type: ignore
                     history.insert(0, chat.to_dict())  # type: ignore
 
                 if num_chats is not None:

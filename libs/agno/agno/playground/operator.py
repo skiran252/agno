@@ -1,9 +1,6 @@
-from typing import Any, List, Optional, Union, cast, Dict
+from typing import Any, List, Optional, Union, cast
 
 from agno.agent.agent import Agent, AgentRun, Function, Toolkit
-from agno.memory.agent import AgentMemory
-from agno.memory.team import TeamMemory
-from agno.memory_v2.memory import Memory
 from agno.run.response import RunResponse
 from agno.run.team import TeamRunResponse
 from agno.storage.session.agent import AgentSession
@@ -54,7 +51,7 @@ def get_session_title(session: Union[AgentSession, TeamSession]) -> str:
         # Proxy for knowing it is legacy memory implementation
         runs = memory.get("runs")
         runs = cast(List[Any], runs)
-        
+
         for _run in runs:
             try:
                 if "response" in _run:
@@ -67,11 +64,11 @@ def get_session_title(session: Union[AgentSession, TeamSession]) -> str:
                             return "No title"
                 else:
                     if "agent_id" in _run:
-                        run_parsed = RunResponse.from_dict(_run)
+                        run_response_parsed = RunResponse.from_dict(_run)
                     else:
-                        run_parsed = TeamRunResponse.from_dict(_run)
-                    if run_parsed.messages is not None and len(run_parsed.messages) > 0:
-                        for msg in run_parsed.messages:
+                        run_response_parsed = TeamRunResponse.from_dict(_run)  # type: ignore
+                    if run_response_parsed.messages is not None and len(run_response_parsed.messages) > 0:
+                        for msg in run_response_parsed.messages:
                             if msg.role == "user":
                                 content = msg.get_content_string()
                                 if content:
@@ -135,7 +132,7 @@ def get_session_title_from_team_session(team_session: TeamSession) -> str:
     if memory is not None:
         runs = memory.get("runs")
         runs = cast(List[Any], runs)
-        
+
         for _run in runs:
             try:
                 if "response" in _run:
@@ -148,11 +145,11 @@ def get_session_title_from_team_session(team_session: TeamSession) -> str:
                             return "No title"
                 else:
                     if "agent_id" in _run:
-                        run_parsed = RunResponse.from_dict(_run)
+                        run_response_parsed = RunResponse.from_dict(_run)
                     else:
-                        run_parsed = TeamRunResponse.from_dict(_run)
-                    if run_parsed.messages is not None and len(run_parsed.messages) > 0:
-                        for msg in run_parsed.messages:
+                        run_response_parsed = TeamRunResponse.from_dict(_run)  # type: ignore
+                    if run_response_parsed.messages is not None and len(run_response_parsed.messages) > 0:
+                        for msg in run_response_parsed.messages:
                             if msg.role == "user":
                                 content = msg.get_content_string()
                                 if content:
