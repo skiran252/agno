@@ -169,16 +169,20 @@ class TestCartesiaTools:
             assert "batch_text_to_speech" in tools.functions
 
     def test_list_voices(self, cartesia_tools, mock_voices):
-        """Test listing all available voices."""
+        """Test listing all available voices returns filtered JSON string."""
+        # Mock the client's list method to return raw voice data (list of dicts)
         cartesia_tools.client.voices.list.return_value = mock_voices
 
-        result = cartesia_tools.list_voices()
-        result_data = json.loads(result)
+        result_json_str = cartesia_tools.list_voices()
+        result_data = json.loads(result_json_str) # The method returns a JSON string
 
         cartesia_tools.client.voices.list.assert_called_once()
+        assert isinstance(result_data, list)
         assert len(result_data) == 2
+        # Check structure of the filtered data in the JSON output
         assert "id" in result_data[0]
         assert "description" in result_data[0]
+        assert "name" not in result_data[0] # Ensure filtering happened
 
     def test_get_voice(self, cartesia_tools, mock_voices):
         """Test getting a specific voice."""
@@ -236,7 +240,8 @@ class TestCartesiaTools:
 
     def test_text_to_speech(self, cartesia_tools):
         """Test basic text-to-speech functionality."""
-        cartesia_tools.client.tts.bytes.return_value = b"audio data"
+        # Mock tts.bytes to return an iterator
+        cartesia_tools.client.tts.bytes.return_value = iter([b"audio data"])
 
         # Create a temporary mock for file operations
         with patch("builtins.open", mock_open()):
@@ -255,10 +260,15 @@ class TestCartesiaTools:
             # Verify correct parameters passed to tts.bytes
             assert call_args["model_id"] == "sonic-2"
             assert call_args["transcript"] == "Hello world"
-            assert call_args["voice_id"] == "a0e99841-438c-4a64-b679-ae501e7d6091"
+            # Verify voice is passed as dict { "mode": "id", "id": ... }
+            assert "voice" in call_args
+            assert call_args["voice"]["mode"] == "id"
+            assert call_args["voice"]["id"] == "a0e99841-438c-4a64-b679-ae501e7d6091"
             assert call_args["language"] == "en"
             assert "output_format" in call_args
-            assert "voice" not in call_args
+            # V2 doesn't expect voice_id directly at the top level
+            # assert call_args["voice_id"] == "a0e99841-438c-4a64-b679-ae501e7d6091"
+            # assert "voice_id" not in call_args # Ensure old param isn't there
             assert "voice_experimental_controls" not in call_args
 
             # Verify output_format has the correct structure
@@ -273,7 +283,8 @@ class TestCartesiaTools:
 
     def test_text_to_speech_with_file_output(self, cartesia_tools):
         """Test TTS with file output."""
-        cartesia_tools.client.tts.bytes.return_value = b"audio data"
+        # Mock tts.bytes to return an iterator
+        cartesia_tools.client.tts.bytes.return_value = iter([b"audio data"])
 
         # Create a Path object for the test
         output_path = Path("output_dir/output.mp3")
@@ -303,7 +314,8 @@ class TestCartesiaTools:
 
     def test_text_to_speech_with_experimental_controls(self, cartesia_tools, caplog):
         """Test TTS accepts speed/emotion controls but ignores them for tts.bytes."""
-        cartesia_tools.client.tts.bytes.return_value = b"audio data"
+        # Mock tts.bytes to return an iterator
+        cartesia_tools.client.tts.bytes.return_value = iter([b"audio data"])
 
         logger_name = agno_logger_instance.name
         original_propagate = agno_logger_instance.propagate
@@ -330,9 +342,14 @@ class TestCartesiaTools:
             call_args = cartesia_tools.client.tts.bytes.call_args[1]
             assert call_args["model_id"] == "sonic-2"
             assert call_args["transcript"] == "Hello world"
-            assert call_args["voice_id"] == "a0e99841-438c-4a64-b679-ae501e7d6091"
-            assert "voice" not in call_args
+            # Verify voice dict is passed correctly
+            assert "voice" in call_args
+            assert call_args["voice"]["mode"] == "id"
+            assert call_args["voice"]["id"] == "a0e99841-438c-4a64-b679-ae501e7d6091"
+            # Ensure experimental controls are NOT passed to tts.bytes
             assert "voice_experimental_controls" not in call_args
+            # assert call_args["voice_id"] == "a0e99841-438c-4a64-b679-ae501e7d6091" # No longer top-level
+            # assert "voice_id" not in call_args # Ensure old param isn't there
 
             assert result_data["success"] is True
 
@@ -353,52 +370,54 @@ class TestCartesiaTools:
 
     def test_text_to_speech_missing_voice_id_finds_default(self, cartesia_tools, mock_voices):
         """Test TTS finds a default voice ID if none is provided."""
-        cartesia_tools.client.tts.bytes.return_value = b"audio data"
-        # Mock list_voices to return available voices
-        cartesia_tools.client.voices.list.return_value = mock_voices
+        # Mock tts.bytes to return an iterator
+        cartesia_tools.client.tts.bytes.return_value = iter([b"audio data"])
+        # Mock list_voices method to return JSON string of filtered voices
+        filtered_voices_json = json.dumps(
+            [{"id": v["id"], "description": v["description"]} for v in mock_voices]
+        )
+        with patch.object(cartesia_tools, "list_voices", return_value=filtered_voices_json) as mock_list_voices:
+            with patch("builtins.open", mock_open()):
+                result = cartesia_tools.text_to_speech(
+                    transcript="Hello world",
+                    model_id="sonic-2",
+                    voice_id=None,  # Missing voice_id
+                    language="en",
+                )
+                result_data = json.loads(result)
 
-        with patch("builtins.open", mock_open()):
+                # Check list_voices was called to find default
+                mock_list_voices.assert_called_once()
+                # Check tts.bytes was called with the default voice ID within the voice dict
+                cartesia_tools.client.tts.bytes.assert_called_once()
+                call_args = cartesia_tools.client.tts.bytes.call_args[1]
+                assert call_args["voice"]["id"] == mock_voices[0]["id"]  # Should use the first voice from list
+                assert result_data["success"] is True
+
+    def test_text_to_speech_missing_voice_id_no_default(self, cartesia_tools):
+        """Test TTS fails gracefully if no voice_id provided and no default found."""
+        # Mock list_voices to return an empty JSON list string
+        with patch.object(cartesia_tools, "list_voices", return_value=json.dumps([])) as mock_list_voices:
+            # No need to mock tts.bytes as it shouldn't be called
+            cartesia_tools.client.tts.bytes.side_effect = Exception("Should not be called")
+
             result = cartesia_tools.text_to_speech(
                 transcript="Hello world",
                 model_id="sonic-2",
                 voice_id=None,  # Missing voice_id
                 language="en",
             )
+
             result_data = json.loads(result)
 
-            # Check list_voices was called to find default
-            cartesia_tools.client.voices.list.assert_called_once()
-            # Check tts.bytes was called with the default voice ID
-            cartesia_tools.client.tts.bytes.assert_called_once()
-            call_args = cartesia_tools.client.tts.bytes.call_args[1]
-            assert call_args["voice_id"] == mock_voices[0]["id"]  # Should use the first voice from list
-            assert result_data["success"] is True
-
-    def test_text_to_speech_missing_voice_id_no_default(self, cartesia_tools):
-        """Test TTS fails gracefully if no voice_id provided and no default found."""
-        # Mock list_voices to return an empty list
-        cartesia_tools.client.voices.list.return_value = []
-
-        # No need to mock tts.bytes as it shouldn't be called
-        cartesia_tools.client.tts.bytes.side_effect = Exception("Should not be called")
-
-        result = cartesia_tools.text_to_speech(
-            transcript="Hello world",
-            model_id="sonic-2",
-            voice_id=None,  # Missing voice_id
-            language="en",
-        )
-
-        result_data = json.loads(result)
-
-        # Check list_voices was called
-        cartesia_tools.client.voices.list.assert_called_once()
-        # Check tts.bytes was NOT called
-        cartesia_tools.client.tts.bytes.assert_not_called()
-        # Check for the specific error message from _get_valid_voice_id
-        assert "error" in result_data
-        assert "Could not automatically determine a voice ID" in result_data["error"]
-        assert "language: en" in result_data["error"]
+            # Check list_voices was called
+            mock_list_voices.assert_called_once()
+            # Check tts.bytes was NOT called
+            cartesia_tools.client.tts.bytes.assert_not_called()
+            # Check for the specific error message from _get_valid_voice_id
+            assert "error" in result_data
+            assert "Could not automatically determine a voice ID" in result_data["error"]
+            assert "language: en" in result_data["error"]
 
     def test_mix_voices(self, cartesia_tools, mock_voices):
         """Test mixing voices functionality."""
@@ -463,7 +482,8 @@ class TestCartesiaTools:
 
     def test_different_output_formats(self, cartesia_tools):
         """Test TTS with different output formats."""
-        cartesia_tools.client.tts.bytes.return_value = b"audio data"
+        # Mock tts.bytes to return an iterator
+        cartesia_tools.client.tts.bytes.return_value = iter([b"audio data"])
 
         # Test with WAV format
         cartesia_tools.text_to_speech(
@@ -477,9 +497,15 @@ class TestCartesiaTools:
         )
 
         # Verify WAV parameters were passed correctly
-        assert cartesia_tools.client.tts.bytes.call_args_list[0][1]["output_format"]["container"] == "wav"
-        assert cartesia_tools.client.tts.bytes.call_args_list[0][1]["output_format"]["encoding"] == "pcm_s16le"
-        assert cartesia_tools.client.tts.bytes.call_args_list[0][1]["output_format"]["sample_rate"] == 48000
+        wav_call_args = cartesia_tools.client.tts.bytes.call_args_list[0][1]
+        assert wav_call_args["voice"]["id"] == "a0e99841-438c-4a64-b679-ae501e7d6091" # Check voice dict
+        assert wav_call_args["output_format"]["container"] == "wav"
+        assert wav_call_args["output_format"]["encoding"] == "pcm_s16le"
+        assert wav_call_args["output_format"]["sample_rate"] == 48000
+
+        # Reset mock for next call if needed (or check call_args_list directly)
+        # cartesia_tools.client.tts.bytes.reset_mock() # Alternative approach
+        # cartesia_tools.client.tts.bytes.return_value = iter([b"audio data"]) # Re-assign mock value
 
         # Test with RAW format
         cartesia_tools.text_to_speech(
@@ -492,10 +518,12 @@ class TestCartesiaTools:
             output_format_encoding="pcm_s16le",
         )
 
-        # Verify RAW parameters were passed correctly
-        assert cartesia_tools.client.tts.bytes.call_args_list[1][1]["output_format"]["container"] == "raw"
-        assert cartesia_tools.client.tts.bytes.call_args_list[1][1]["output_format"]["encoding"] == "pcm_s16le"
-        assert cartesia_tools.client.tts.bytes.call_args_list[1][1]["output_format"]["sample_rate"] == 22050
+        # Verify RAW parameters were passed correctly (using call_args_list index)
+        raw_call_args = cartesia_tools.client.tts.bytes.call_args_list[1][1]
+        assert raw_call_args["voice"]["id"] == "a0e99841-438c-4a64-b679-ae501e7d6091" # Check voice dict
+        assert raw_call_args["output_format"]["container"] == "raw"
+        assert raw_call_args["output_format"]["encoding"] == "pcm_s16le"
+        assert raw_call_args["output_format"]["sample_rate"] == 22050
 
     def test_get_api_status(self, cartesia_tools):
         """Test getting API status."""
@@ -524,7 +552,8 @@ class TestCartesiaTools:
 
     def test_text_to_speech_with_sonic_turbo(self, cartesia_tools):
         """Test TTS with sonic-turbo model."""
-        cartesia_tools.client.tts.bytes.return_value = b"audio data"
+        # Mock tts.bytes to return an iterator
+        cartesia_tools.client.tts.bytes.return_value = iter([b"audio data"])
 
         with patch("builtins.open", mock_open()):
             result = cartesia_tools.text_to_speech(
@@ -537,13 +566,18 @@ class TestCartesiaTools:
             result_data = json.loads(result)
 
             cartesia_tools.client.tts.bytes.assert_called_once()
-            assert cartesia_tools.client.tts.bytes.call_args[1]["model_id"] == "sonic-turbo"
-            assert "output_format" in cartesia_tools.client.tts.bytes.call_args[1]
+            call_args = cartesia_tools.client.tts.bytes.call_args[1]
+            assert call_args["model_id"] == "sonic-turbo"
+            # Verify voice dict
+            assert "voice" in call_args
+            assert call_args["voice"]["id"] == "a0e99841-438c-4a64-b679-ae501e7d6091"
+            assert "output_format" in call_args
             assert result_data["success"] is True
 
     def test_text_to_speech_without_saving(self, cartesia_tools):
         """Test TTS without saving to file."""
-        cartesia_tools.client.tts.bytes.return_value = b"audio data"
+        # Mock tts.bytes to return an iterator
+        cartesia_tools.client.tts.bytes.return_value = iter([b"audio data"])
 
         result = cartesia_tools.text_to_speech(
             transcript="Hello world",
@@ -565,71 +599,88 @@ class TestCartesiaTools:
 
     def test_text_to_speech_stream(self, cartesia_tools):
         """Test streaming TTS functionality returns success message."""
-        # Mock the tts.stream method (it doesn't need a return value for this test)
-        cartesia_tools.client.tts.stream = MagicMock()
+        # Mock the tts.sse method to return an empty iterator
+        mock_sse_iterator = iter([])
+        cartesia_tools.client.tts.sse = MagicMock(return_value=mock_sse_iterator)
+        # Also need to mock list_voices as _get_valid_voice_id calls it
+        filtered_voices_json = json.dumps([{"id": "test-voice-id", "description": "Test Voice"}])
+        with patch.object(cartesia_tools, "list_voices", return_value=filtered_voices_json):
+            result = cartesia_tools.text_to_speech_stream(
+                transcript="Test transcript",
+                model_id="sonic-2",
+                voice_id="test-voice-id",
+                language="en",
+                output_format_container="mp3",
+                output_format_sample_rate=44100,
+                output_format_bit_rate=128000,
+                # Add experimental controls to ensure they are passed correctly
+                voice_experimental_controls_speed="slow",
+                voice_experimental_controls_emotion=["sadness"],
+            )
 
-        result = cartesia_tools.text_to_speech_stream(
-            transcript="Test transcript",
-            model_id="sonic-2",
-            voice_id="test-voice-id",
-            language="en",
-            output_format_container="mp3",
-            output_format_sample_rate=44100,
-            output_format_bit_rate=128000,
-            # Add experimental controls to ensure they are passed correctly
-            voice_experimental_controls_speed="slow",
-            voice_experimental_controls_emotion=["sadness"],
-        )
+            # Parse the JSON result
+            result_data = json.loads(result)
 
-        # Parse the JSON result
-        result_data = json.loads(result)
+            # Verify the API was called correctly using tts.sse
+            cartesia_tools.client.tts.sse.assert_called_once()
+            call_args = cartesia_tools.client.tts.sse.call_args[1]  # Get kwargs
 
-        # Verify the API was called correctly
-        cartesia_tools.client.tts.stream.assert_called_once()
-        call_args = cartesia_tools.client.tts.stream.call_args[1]  # Get kwargs
+            # Check basic parameters
+            assert call_args["model_id"] == "sonic-2"
+            assert call_args["transcript"] == "Test transcript"
+            # Verify voice dict passed to sse
+            assert "voice" in call_args
+            assert call_args["voice"]["mode"] == "id"
+            assert call_args["voice"]["id"] == "test-voice-id"
+            # assert call_args["voice_id"] == "test-voice-id" # No longer top-level
+            assert call_args["language"] == "en"
 
-        # Check basic parameters
-        assert call_args["model_id"] == "sonic-2"
-        assert call_args["transcript"] == "Test transcript"
-        assert call_args["voice_id"] == "test-voice-id"  # Stream uses direct voice_id
-        assert call_args["language"] == "en"
+            # Check output format
+            assert call_args["output_format"]["container"] == "mp3"
+            assert call_args["output_format"]["sample_rate"] == 44100
+            assert call_args["output_format"]["bit_rate"] == 128000
 
-        # Check output format
-        assert call_args["output_format"]["container"] == "mp3"
-        assert call_args["output_format"]["sample_rate"] == 44100
-        assert call_args["output_format"]["bit_rate"] == 128000
+            # Check experimental controls are passed correctly for stream
+            assert "voice_experimental_controls" in call_args
+            assert call_args["voice_experimental_controls"]["speed"] == "slow"
+            assert call_args["voice_experimental_controls"]["emotion"] == ["sadness"]
 
-        # Check experimental controls are passed correctly for stream
-        assert "voice_experimental_controls" in call_args
-        assert call_args["voice_experimental_controls"]["speed"] == "slow"
-        assert call_args["voice_experimental_controls"]["emotion"] == ["sadness"]
-
-        # Verify correct response structure for the stream initiation message
-        assert result_data["success"] is True
-        assert "message" in result_data
-        assert result_data["message"] == "Streaming started."
+            # Verify correct response structure for the stream initiation message
+            assert result_data["success"] is True
+            assert "message" in result_data
+            assert result_data["message"] == "Streaming finished." # Updated message
 
     def test_batch_text_to_speech(self, cartesia_tools):
         """Test batch TTS functionality."""
-        cartesia_tools.client.tts.bytes.return_value = b"audio data"
+        # Mock tts.bytes to return an iterator
+        cartesia_tools.client.tts.bytes.return_value = iter([b"audio data"])
+        # Mock list_voices as _get_valid_voice_id calls it before the loop
+        filtered_voices_json = json.dumps([{"id": "a0e99841-438c-4a64-b679-ae501e7d6091", "description": "Default"}])
+        with patch.object(cartesia_tools, "list_voices", return_value=filtered_voices_json):
+            with patch("builtins.open", mock_open()):
+                result = cartesia_tools.batch_text_to_speech(
+                    transcripts=["Hello", "World", "Test"],
+                    model_id="sonic-2",
+                    voice_id="a0e99841-438c-4a64-b679-ae501e7d6091",
+                    language="en",
+                )
 
-        with patch("builtins.open", mock_open()):
-            result = cartesia_tools.batch_text_to_speech(
-                transcripts=["Hello", "World", "Test"],
-                model_id="sonic-2",
-                voice_id="a0e99841-438c-4a64-b679-ae501e7d6091",
-                language="en",
-            )
+                result_data = json.loads(result)
 
-            result_data = json.loads(result)
+                assert cartesia_tools.client.tts.bytes.call_count == 3
+                # Verify voice dict was passed correctly in calls
+                for call in cartesia_tools.client.tts.bytes.call_args_list:
+                    args, kwargs = call
+                    assert "voice" in kwargs
+                    assert kwargs["voice"]["mode"] == "id"
+                    assert kwargs["voice"]["id"] == "a0e99841-438c-4a64-b679-ae501e7d6091"
 
-            assert cartesia_tools.client.tts.bytes.call_count == 3
-            assert "success" in result_data
-            assert result_data["success"] is True
-            assert "total" in result_data
-            assert result_data["total"] == 3
-            assert "success_count" in result_data
-            assert "output_directory" in result_data
+                assert "success" in result_data
+                assert result_data["success"] is True
+                assert "total" in result_data
+                assert result_data["total"] == 3
+                assert "success_count" in result_data
+                assert "output_directory" in result_data
 
     def test_delete_voice(self, mock_cartesia):
         """Test deleting a voice."""
@@ -840,3 +891,41 @@ class TestCartesiaTools:
         tools.client.datasets.delete.assert_called_once_with(id="ds_to_delete")  # Use tools.client
         assert "message" in result_data
         assert result_data["message"] == "Dataset deleted"
+
+    # Add new test for list_dataset_files if needed
+    def test_list_dataset_files(self, mock_cartesia):
+        """Test listing files in a dataset."""
+        # Enable the specific feature
+        tools = CartesiaTools(datasets_enabled=True)
+        mock_files = [{"name": "file1.txt", "size": 1024}, {"name": "file2.csv", "size": 2048}]
+        # Ensure the list_files method exists on the mock client's datasets object
+        if not hasattr(tools.client.datasets, 'list_files'):
+            tools.client.datasets.list_files = MagicMock()
+        tools.client.datasets.list_files.return_value = mock_files
+
+        result = tools.list_dataset_files(dataset_id="ds1")
+        result_data = json.loads(result)
+
+        tools.client.datasets.list_files.assert_called_once_with(id="ds1")
+        assert len(result_data) == 2
+        assert result_data[0]["name"] == "file1.txt"
+
+    # Add new test for save_audio_to_file if needed
+    def test_save_audio_to_file(self, cartesia_tools):
+        """Test saving audio data to a file."""
+        audio_bytes = b"dummy audio data"
+        filename = "test_save.mp3"
+        output_path = Path("tmp/audio_output") / filename
+
+        with patch("builtins.open", mock_open()) as mock_file:
+            with patch.object(cartesia_tools, "output_dir", Path("tmp/audio_output")): # Ensure output_dir is correct
+
+                result = cartesia_tools.save_audio_to_file(audio_data=audio_bytes, filename=filename)
+                result_data = json.loads(result)
+
+                mock_file.assert_called_once_with(output_path, "wb")
+                mock_file().write.assert_called_once_with(audio_bytes)
+
+                assert result_data["success"] is True
+                assert result_data["file_path"] == str(output_path)
+                assert result_data["size_bytes"] == len(audio_bytes)

@@ -116,6 +116,10 @@ class CartesiaTools(Toolkit):
 
             # Ensure voices_data is a list
             if not isinstance(voices_data, list):
+                # Log the error case before raising
+                logger.error(
+                    f"Unexpected type for voices_data. Expected list, got {type(voices_data)}. Content: {voices_data}"
+                )
                 raise ValueError(f"Expected a list of voices from list_voices, but got {type(voices_data)}")
 
             # Filter voices by language if the list_voices method doesn't already do it
@@ -244,15 +248,34 @@ class CartesiaTools(Toolkit):
         """
         try:
             result = self.client.voices.list()
+
             # Filter to only include id and description for each voice
             filtered_result = []
             for voice in result:
-                filtered_voice = {"id": voice.get("id"), "description": voice.get("description")}
-                filtered_result.append(filtered_voice)
+                # Attempt to access attributes assuming it might be an object
+                try:
+                    voice_id = voice.id if hasattr(voice, "id") else voice.get("id")
+                    description = voice.description if hasattr(voice, "description") else voice.get("description")
+                    if voice_id:  # Only add if we could get an ID
+                        filtered_voice = {"id": voice_id, "description": description}
+                        filtered_result.append(filtered_voice)
+                    else:
+                        logger.warning(f"Could not extract 'id' from voice object/dict: {voice}")
+                except AttributeError as ae:
+                    logger.error(f"AttributeError accessing voice data: {ae}. Voice data: {voice}")
+                    # Re-raise or handle differently if needed, for now just log and skip
+                    continue  # Skip this voice if attribute access fails fundamentally
+                except Exception as inner_e:
+                    logger.error(f"Unexpected error processing voice: {inner_e}. Voice data: {voice}")
+                    continue  # Skip this voice
+
             return json.dumps(filtered_result, indent=4)
         except Exception as e:
-            logger.error(f"Error listing voices from Cartesia: {e}")
-            return json.dumps({"error": str(e)})
+            logger.error(
+                f"Error listing voices from Cartesia: {e}", exc_info=True
+            )  # Add exc_info=True for full traceback
+            # Return error JSON consistent with the pattern
+            return json.dumps({"error": str(e), "detail": "Error occurred in list_voices function."})
 
     def localize_voice(
         self,
@@ -446,12 +469,21 @@ class CartesiaTools(Toolkit):
 
             # Create proper output_format based on container type
             output_format: Dict[str, Any]
+            requested_bit_rate = output_format_bit_rate or 128000  # Use provided or default
+
             if output_format_container == "mp3":
+                # Cap MP3 bitrate at 192kbps to avoid API errors for unsupported high values
+                capped_bit_rate = min(requested_bit_rate, 192000)
+                if requested_bit_rate > 192000:
+                    logger.warning(
+                        f"Requested MP3 bit rate {requested_bit_rate} exceeds supported limit. Capping at {capped_bit_rate}."
+                    )
+
                 output_format = {
                     "container": "mp3",
                     "sample_rate": output_format_sample_rate,
-                    "bit_rate": output_format_bit_rate or 128000,
-                    "encoding": output_format_encoding or "mp3",
+                    "bit_rate": capped_bit_rate,  # Use capped value
+                    "encoding": output_format_encoding or "mp3",  # API likely requires encoding even for mp3
                 }
             elif output_format_container in ["wav", "raw"]:
                 encoding = output_format_encoding or "pcm_s16le"
@@ -469,13 +501,11 @@ class CartesiaTools(Toolkit):
                 if output_format_bit_rate:
                     output_format["bit_rate"] = output_format_bit_rate
 
-            # --- Prepare parameters (Simplest version - No experimental controls) ---
-
             # Base parameters for the API call
             params: Dict[str, Any] = {
                 "model_id": model_id,
                 "transcript": transcript,
-                "voice_id": valid_voice_id,
+                "voice": {"mode": "id", "id": valid_voice_id},
                 "language": normalized_language,
                 "output_format": output_format,
             }
@@ -487,10 +517,13 @@ class CartesiaTools(Toolkit):
             # Log parameters just before the API call for debugging
             logger.debug(f"Calling Cartesia tts.bytes with params: {json.dumps(params, indent=2)}")
 
-            # Make the API call
-            audio_data = self.client.tts.bytes(**params)
+            # Make the API call - v2 returns an iterator
+            audio_iterator = self.client.tts.bytes(**params)
 
-            total_bytes = len(audio_data)
+            # Concatenate the bytes from the iterator
+            audio_data = b"".join(chunk for chunk in audio_iterator)
+
+            total_bytes = len(audio_data)  # Now len() should work on the bytes object
 
             # Save to file if requested
             if output_path or save_to_file:
@@ -572,11 +605,20 @@ class CartesiaTools(Toolkit):
 
             # Create proper output_format based on container type
             output_format: Dict[str, Any]
+            requested_bit_rate = output_format_bit_rate or 128000  # Default to 128kbps if not provided
+
             if output_format_container == "mp3":
+                # Cap MP3 bitrate at 192kbps
+                capped_bit_rate = min(requested_bit_rate, 192000)
+                if requested_bit_rate > 192000:
+                    logger.warning(
+                        f"Requested MP3 bit rate {requested_bit_rate} for infill exceeds supported limit. Capping at {capped_bit_rate}."
+                    )
+
                 output_format = {
                     "container": "mp3",
                     "sample_rate": output_format_sample_rate,
-                    "bit_rate": output_format_bit_rate or 128000,  # Default to 128kbps if not provided
+                    "bit_rate": capped_bit_rate,  # Use capped value
                     "encoding": output_format_encoding or "mp3",  # API requires encoding field even for mp3
                 }
             elif output_format_container in ["wav", "raw"]:
@@ -917,7 +959,7 @@ class CartesiaTools(Toolkit):
             params: Dict[str, Any] = {
                 "model_id": model_id,
                 "transcript": transcript,
-                "voice_id": valid_voice_id,
+                "voice": {"mode": "id", "id": valid_voice_id},
                 "language": normalized_language,
                 "output_format": output_format,
             }
@@ -936,18 +978,40 @@ class CartesiaTools(Toolkit):
                 params["voice_experimental_controls"] = voice_controls
 
             # Log parameters just before the API call for debugging
-            logger.debug(f"Calling Cartesia tts.stream with params: {params}")
+            logger.debug(f"Calling Cartesia tts.sse with params: {params}")
 
-            # Make the streaming API call
-            self.client.tts.stream(**params)
+            # Make the streaming API call using .sse()
+            sse_iterator = self.client.tts.sse(**params)
+
+            # Consume the iterator (or handle the stream as needed)
+            # In a real streaming scenario, you'd process each event in the sse_iterator
+            # For now, just iterating through it to ensure the call works and logging completion.
+            logger.info("SSE stream initiated. Consuming stream...")
+            for event in sse_iterator:
+                # Log event type or data for debugging if necessary
+                logger.debug(f"Received SSE event: type={type(event)}")
+                # Example: Check event type and extract data if needed
+                # if isinstance(event, SomeExpectedEventType):
+                #    process_event(event)
+                pass  # Replace with actual stream processing logic if required by the caller
+            logger.info("SSE stream consumed/finished.")
 
             # Note: Returning the raw stream response might not be ideal for the agent framework
             # which expects JSON strings. Consider how the agent will handle this stream.
             # For now, returning a success message indicating a stream was initiated.
             # The actual stream handling would likely happen outside this tool method.
-            return json.dumps({"success": True, "message": "Streaming started."}, indent=4)
+            return json.dumps({"success": True, "message": "Streaming finished."}, indent=4)
             # Or potentially: return {"success": True, "stream": response} # If framework handles non-JSON
 
+        except AttributeError as ae:
+            # Catch potential attribute errors related to changed client structure
+            logger.error(f"AttributeError during streaming: {ae}. Check SDK v2 method names.", exc_info=True)
+            return json.dumps(
+                {
+                    "error": f"AttributeError: {ae}. Check SDK v2 compatibility.",
+                    "detail": "Likely due to using an old method name like .stream instead of .sse",
+                }
+            )
         except Exception as e:
             logger.error(f"Error streaming speech with Cartesia: {e}", exc_info=True)
             return json.dumps({"error": str(e)})
@@ -1010,11 +1074,20 @@ class CartesiaTools(Toolkit):
                 try:
                     # Create proper output_format based on container type
                     output_format: Dict[str, Any]
+                    requested_bit_rate = output_format_bit_rate or 128000  # Use provided or default for batch item
+
                     if output_format_container == "mp3":
+                        # Cap MP3 bitrate at 192kbps
+                        capped_bit_rate = min(requested_bit_rate, 192000)
+                        if requested_bit_rate > 192000:
+                            logger.warning(
+                                f"Requested MP3 bit rate {requested_bit_rate} for batch item {i + 1} exceeds supported limit. Capping at {capped_bit_rate}."
+                            )
+
                         output_format = {
                             "container": "mp3",
                             "sample_rate": output_format_sample_rate,
-                            "bit_rate": output_format_bit_rate or 128000,
+                            "bit_rate": capped_bit_rate,  # Use capped value
                             "encoding": output_format_encoding or "mp3",
                         }
                     elif output_format_container in ["wav", "raw"]:
@@ -1030,15 +1103,16 @@ class CartesiaTools(Toolkit):
                             "sample_rate": output_format_sample_rate,
                             "encoding": output_format_encoding or "pcm_s16le",
                         }
-                        if output_format_bit_rate:
-                            output_format["bit_rate"] = output_format_bit_rate
+                        if requested_bit_rate:
+                            output_format["bit_rate"] = requested_bit_rate
 
-                    # Create the parameters object exactly as required by the SDK
+                    # Create the parameters object exactly as required by the SDK v2
                     params: Dict[str, Any] = {
                         "model_id": model_id,
                         "transcript": text,
-                        "voice_id": valid_voice_id,
-                        "language": normalized_language,
+                        # Pass voice as a dict { "mode": "id", "id": ... }
+                        "voice": {"mode": "id", "id": valid_voice_id},
+                        "language": normalized_language,  # Ensure language code is supported
                         "output_format": output_format,
                     }
 
@@ -1046,15 +1120,21 @@ class CartesiaTools(Toolkit):
                     if duration is not None:
                         params["duration"] = duration
 
-                    # Add voice controls if they exist
+                    # Add voice controls if they exist (Check v2 compatibility)
+                    # if voice_controls:
+                    #     params["voice_experimental_controls"] = voice_controls
                     if voice_controls:
-                        params["voice_experimental_controls"] = voice_controls
+                        logger.warning(
+                            "Passing voice_experimental_controls might not be supported or changed in Cartesia v2 batch. Ignoring for now."
+                        )
 
                     # Log parameters just before the API call for debugging
                     logger.debug(f"Calling Cartesia tts.bytes with params (item {i + 1}): {params}")
 
-                    # Make the API call
-                    audio_data = self.client.tts.bytes(**params)
+                    # Make the API call - v2 returns an iterator
+                    audio_iterator = self.client.tts.bytes(**params)
+                    # Concatenate bytes
+                    audio_data = b"".join(chunk for chunk in audio_iterator)
 
                     # Create filename
                     filename = f"batch_tts_{i + 1}.{output_format_container}"
