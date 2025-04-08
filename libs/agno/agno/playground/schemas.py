@@ -37,7 +37,7 @@ class AgentGetResponse(BaseModel):
             memory_dict: Optional[Dict[str, Any]] = {}
             if isinstance(agent.memory, AgentMemory) and agent.memory.db:
                 memory_dict = {"name": agent.memory.db.__class__.__name__}
-            elif isinstance(agent.memory, Memory) and agent.memory.memory_db:
+            elif isinstance(agent.memory, Memory) and agent.memory.db:
                 memory_dict = {"name": "Memory"}
                 if agent.memory.model is not None:
                     memory_dict["model"] = AgentModel(
@@ -45,10 +45,8 @@ class AgentGetResponse(BaseModel):
                         model=agent.memory.model.id,
                         provider=agent.memory.model.provider,
                     )
-                if agent.memory.memory_db is not None:
-                    memory_dict["memory_db"] = str(agent.memory.memory_db)
-                if agent.memory.summary_db is not None:
-                    memory_dict["summary_db"] = str(agent.memory.summary_db)
+                if agent.memory.db is not None:
+                    memory_dict["db"] = str(agent.memory.db)
 
             else:
                 memory_dict = None
@@ -167,10 +165,8 @@ class TeamGetResponse(BaseModel):
                     model=team.memory.model.id,
                     provider=team.memory.model.provider,
                 )
-            if team.memory.memory_db is not None:
-                memory_dict["memory_db"] = str(team.memory.memory_db)
-            if team.memory.summary_db is not None:
-                memory_dict["summary_db"] = str(team.memory.summary_db)
+            if team.memory.db is not None:
+                memory_dict["db"] = str(team.memory.db)
         elif isinstance(team.memory, TeamMemory):
             memory_dict = {"name": team.memory.db.__class__.__name__}
         else:

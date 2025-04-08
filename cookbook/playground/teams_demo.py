@@ -18,7 +18,7 @@ db_url = "postgresql+psycopg://ai:ai@localhost:5532/ai"
 memory_db = PostgresMemoryDb(table_name="memory", db_url=db_url)
 
 # No need to set the model, it gets set by the agent to the agent's model
-memory = Memory(memory_db=memory_db)
+memory = Memory(db=memory_db)
 
 
 file_agent = Agent(

@@ -170,7 +170,7 @@ def get_sync_playground_router(
                 memory_dict: Optional[Dict[str, Any]] = {}
                 if isinstance(agent.memory, AgentMemory) and agent.memory.db:
                     memory_dict = {"name": agent.memory.db.__class__.__name__}
-                elif isinstance(agent.memory, Memory) and agent.memory.memory_db:
+                elif isinstance(agent.memory, Memory) and agent.memory.db:
                     memory_dict = {"name": "Memory"}
                     if agent.memory.model is not None:
                         memory_dict["model"] = AgentModel(
@@ -178,10 +178,8 @@ def get_sync_playground_router(
                             model=agent.memory.model.id,
                             provider=agent.memory.model.provider,
                         )
-                    if agent.memory.memory_db is not None:
-                        memory_dict["memory_db"] = str(agent.memory.memory_db)
-                    if agent.memory.summary_db is not None:
-                        memory_dict["summary_db"] = str(agent.memory.summary_db)
+                    if agent.memory.db is not None:
+                        memory_dict["db"] = str(agent.memory.db)
 
                 else:
                     memory_dict = None

@@ -21,7 +21,7 @@ from utils import print_chat_history, print_team_memory
 # This memory is shared by all the agents in the team
 memory_db = SqliteMemoryDb(table_name="memory", db_file="tmp/memory.db")
 
-memory = Memory(model=Gemini(id="gemini-2.0-flash-exp"), memory_db=memory_db)
+memory = Memory(model=Gemini(id="gemini-2.0-flash-exp"), db=memory_db)
 
 # Reset the memory for this example
 memory.clear()

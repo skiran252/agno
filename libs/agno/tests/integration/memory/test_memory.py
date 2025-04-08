@@ -34,23 +34,15 @@ def memory_db(temp_db_file):
 
 
 @pytest.fixture
-def summary_db(temp_db_file):
-    """Create a SQLite summary database for testing."""
-    db = SqliteSummaryDb(db_file=temp_db_file)
-    db.create()
-    return db
-
-
-@pytest.fixture
 def model():
     """Create a Gemini model for testing."""
     return Gemini(id="gemini-2.0-flash-exp")
 
 
 @pytest.fixture
-def memory_with_db(model, memory_db, summary_db):
+def memory_with_db(model, memory_db):
     """Create a Memory instance with database connections."""
-    return Memory(model=model, memory_db=memory_db, summary_db=summary_db, use_json_mode=True)
+    return Memory(model=model, db=memory_db, use_json_mode=True)
 
 
 def test_add_user_memory_with_db(memory_with_db):
@@ -67,7 +59,7 @@ def test_add_user_memory_with_db(memory_with_db):
 
     # Create a new Memory instance with the same database
     new_memory = Memory(
-        model=memory_with_db.model, memory_db=memory_with_db.memory_db, summary_db=memory_with_db.summary_db
+        model=memory_with_db.model, db=memory_with_db.db
     )
 
     # Verify the memory was loaded from the database
@@ -97,7 +89,7 @@ def test_create_user_memories_with_db(memory_with_db):
 
     # Create a new Memory instance with the same database
     new_memory = Memory(
-        model=memory_with_db.model, memory_db=memory_with_db.memory_db, summary_db=memory_with_db.summary_db
+        model=memory_with_db.model, db=memory_with_db.db
     )
 
     # Verify memories were loaded from the database
@@ -125,7 +117,7 @@ async def test_acreate_user_memory_with_db(memory_with_db):
 
     # Create a new Memory instance with the same database
     new_memory = Memory(
-        model=memory_with_db.model, memory_db=memory_with_db.memory_db, summary_db=memory_with_db.summary_db
+        model=memory_with_db.model, db=memory_with_db.db
     )
 
     # Verify memory was loaded from the database
@@ -157,7 +149,7 @@ async def test_acreate_user_memories_with_db(memory_with_db):
 
     # Create a new Memory instance with the same database
     new_memory = Memory(
-        model=memory_with_db.model, memory_db=memory_with_db.memory_db, summary_db=memory_with_db.summary_db
+        model=memory_with_db.model, db=memory_with_db.db
     )
 
     # Verify memories were loaded from the database
@@ -218,7 +210,7 @@ def test_create_session_summary_with_db(memory_with_db):
 
     # Create a new Memory instance with the same database
     new_memory = Memory(
-        model=memory_with_db.model, memory_db=memory_with_db.memory_db, summary_db=memory_with_db.summary_db
+        model=memory_with_db.model, db=memory_with_db.db
     )
 
     # Verify the summary was loaded from the database
@@ -253,7 +245,7 @@ async def test_acreate_session_summary_with_db(memory_with_db):
 
     # Create a new Memory instance with the same database
     new_memory = Memory(
-        model=memory_with_db.model, memory_db=memory_with_db.memory_db, summary_db=memory_with_db.summary_db
+        model=memory_with_db.model, db=memory_with_db.db
     )
 
     # Verify the summary was loaded from the database
@@ -262,10 +254,10 @@ async def test_acreate_session_summary_with_db(memory_with_db):
     assert loaded_summary.summary == summary.summary
 
 
-def test_memory_persistence_across_instances(model, memory_db, summary_db):
+def test_memory_persistence_across_instances(model, memory_db):
     """Test that memories persist across different Memory instances."""
     # Create the first Memory instance
-    memory1 = Memory(model=model, memory_db=memory_db, summary_db=summary_db, use_json_mode=True)
+    memory1 = Memory(model=model, db=memory_db, use_json_mode=True)
 
     # Add a user memory
     user_memory = UserMemory(memory="The user's name is John Doe", topics=["name", "user"], last_updated=datetime.now())
@@ -273,7 +265,7 @@ def test_memory_persistence_across_instances(model, memory_db, summary_db):
     memory_id = memory1.add_user_memory(memory=user_memory, user_id="test_user")
 
     # Create a second Memory instance with the same database
-    memory2 = Memory(model=model, memory_db=memory_db, summary_db=summary_db)
+    memory2 = Memory(model=model, db=memory_db)
 
     # Verify the memory is accessible from the second instance
     assert memory2.get_user_memory("test_user", memory_id) is not None
@@ -305,7 +297,7 @@ def test_memory_operations_with_db(memory_with_db):
 
     # Create a new Memory instance with the same database
     new_memory = Memory(
-        model=memory_with_db.model, memory_db=memory_with_db.memory_db, summary_db=memory_with_db.summary_db
+        model=memory_with_db.model, db=memory_with_db.db
     )
 
     # Verify the memory is still deleted in the new instance
@@ -342,7 +334,7 @@ def test_summary_operations_with_db(memory_with_db):
 
     # Create a new Memory instance with the same database
     new_memory = Memory(
-        model=memory_with_db.model, memory_db=memory_with_db.memory_db, summary_db=memory_with_db.summary_db
+        model=memory_with_db.model, db=memory_with_db.db
     )
 
     # Verify the summary is still deleted in the new instance
@@ -382,7 +374,7 @@ def test_clear_memory_with_db(memory_with_db):
 
     # Create a new Memory instance with the same database
     new_memory = Memory(
-        model=memory_with_db.model, memory_db=memory_with_db.memory_db, summary_db=memory_with_db.summary_db
+        model=memory_with_db.model, db=memory_with_db.db
     )
 
     # Verify the memory is still cleared in the new instance

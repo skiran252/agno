@@ -24,7 +24,7 @@ db_url = "postgresql+psycopg://ai:ai@localhost:5532/ai"
 memory_db = SqliteMemoryDb(table_name="memory", db_file=memory_storage_file)
 
 # No need to set the model, it gets set by the agent to the agent's model
-memory = Memory(memory_db=memory_db)
+memory = Memory(db=memory_db)
 
 simple_agent = Agent(
     name="Simple Agent",

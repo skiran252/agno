@@ -60,7 +60,7 @@ def memory_db(temp_memory_db_file):
 @pytest.fixture
 def memory(memory_db):
     """Create a Memory instance for testing."""
-    return Memory(model=Claude(id="claude-3-5-sonnet-20241022"), memory_db=memory_db)
+    return Memory(model=Claude(id="claude-3-5-sonnet-20241022"), db=memory_db)
 
 
 @pytest.fixture

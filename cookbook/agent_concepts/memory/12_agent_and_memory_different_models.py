@@ -9,11 +9,10 @@ from agno.memory_v2.db.memory.sqlite import SqliteMemoryDb
 from agno.memory_v2.memory import Memory
 from agno.models.anthropic.claude import Claude
 from agno.models.google.gemini import Gemini
-from agno.models.openai.chat import OpenAIChat
 
 memory_db = SqliteMemoryDb(table_name="memory", db_file="tmp/memory.db")
 
-memory = Memory(model=Claude(id="claude-3-5-sonnet-20241022"), memory_db=memory_db)
+memory = Memory(model=Claude(id="claude-3-5-sonnet-20241022"), db=memory_db)
 
 # Reset the memory for this example
 memory.clear()

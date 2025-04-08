@@ -122,8 +122,7 @@ class Memory:
     # Summarizer to generate session summaries
     summary_manager: Optional[SessionSummarizer] = None
 
-    memory_db: Optional[MemoryDb] = None
-    summary_db: Optional[SummaryDb] = None
+    db: Optional[MemoryDb] = None
 
     # runs per session
     runs: Optional[Dict[str, List[Union[RunResponse, TeamRunResponse]]]] = None
@@ -140,8 +139,7 @@ class Memory:
         use_json_mode: Optional[bool] = None,
         memory_manager: Optional[MemoryManager] = None,
         summarizer: Optional[SessionSummarizer] = None,
-        memory_db: Optional[MemoryDb] = None,
-        summary_db: Optional[SummaryDb] = None,
+        db: Optional[MemoryDb] = None,
         memories: Optional[Dict[str, Dict[str, UserMemory]]] = None,
         summaries: Optional[Dict[str, Dict[str, SessionSummary]]] = None,
         runs: Optional[Dict[str, List[Union[RunResponse, TeamRunResponse]]]] = None,
@@ -167,8 +165,7 @@ class Memory:
 
         self.summary_manager = summarizer
 
-        self.memory_db = memory_db
-        self.summary_db = summary_db
+        self.db = db
 
         # We are making memories
         if self.model is not None:
@@ -193,7 +190,7 @@ class Memory:
             self.summary_manager.use_json_mode = self.use_json_mode
 
         # Initialize the memory and summary databases
-        if self.memory_db or self.summary_db:
+        if self.db:
             self.initialize()
 
         self.monitoring = monitoring
@@ -218,20 +215,12 @@ class Memory:
         return self.model
 
     def initialize(self):
-        if self.memory_db:
-            all_memories = self.memory_db.read_memories()
+        if self.db:
+            all_memories = self.db.read_memories()
             self.memories = {}
             for memory in all_memories:
                 if memory.user_id is not None and memory.id is not None:
                     self.memories.setdefault(memory.user_id, {})[memory.id] = UserMemory.from_dict(memory.memory)
-        if self.summary_db:
-            all_summaries = self.summary_db.read_summaries()
-            self.summaries = {}
-            for summary in all_summaries:
-                if summary.user_id is not None and summary.id is not None:
-                    self.summaries.setdefault(summary.user_id, {})[summary.id] = SessionSummary.from_dict(
-                        summary.summary
-                    )
 
     def to_dict(self) -> Dict[str, Any]:
         _memory_dict = {}
@@ -306,7 +295,7 @@ class Memory:
             memory.last_updated = datetime.now()
 
         self.memories.setdefault(user_id, {})[memory_id] = memory  # type: ignore
-        if self.memory_db:
+        if self.db:
             self._upsert_db_memory(
                 memory=MemoryRow(
                     id=memory_id,
@@ -343,7 +332,7 @@ class Memory:
             return None
 
         self.memories.setdefault(user_id, {})[memory_id] = memory  # type: ignore
-        if self.memory_db:
+        if self.db:
             self._upsert_db_memory(
                 memory=MemoryRow(
                     id=memory_id,
@@ -362,7 +351,7 @@ class Memory:
             memory_id (str): The id of the memory to delete
         """
         del self.memories[user_id][memory_id]  # type: ignore
-        if self.memory_db:
+        if self.db:
             self._delete_db_memory(memory_id=memory_id)
 
     def delete_session_summary(self, user_id: str, session_id: str) -> None:
@@ -372,8 +361,6 @@ class Memory:
             session_id (str): The id of the session to delete
         """
         del self.summaries[user_id][session_id]  # type: ignore
-        if self.summary_db:
-            self._delete_db_summary(session_id=session_id)
 
     # -*- Agent Functions
     def create_session_summary(self, session_id: str, user_id: Optional[str] = None) -> Optional[SessionSummary]:
@@ -391,16 +378,6 @@ class Memory:
             summary=summary_response.summary, topics=summary_response.topics, last_updated=datetime.now()
         )
         self.summaries.setdefault(user_id, {})[session_id] = session_summary  # type: ignore
-
-        if self.summary_db:
-            self._upsert_db_summary(
-                summary=SummaryRow(
-                    id=session_id,
-                    user_id=user_id,
-                    summary=session_summary.to_dict(),
-                    last_updated=session_summary.last_updated,
-                )
-            )
 
         return session_summary
 
@@ -421,16 +398,6 @@ class Memory:
             summary=summary_response.summary, topics=summary_response.topics, last_updated=datetime.now()
         )
         self.summaries.setdefault(user_id, {})[session_id] = session_summary  # type: ignore
-
-        if self.summary_db:
-            self._upsert_db_summary(
-                summary=SummaryRow(
-                    id=session_id,
-                    user_id=user_id,
-                    summary=session_summary.to_dict(),
-                    last_updated=session_summary.last_updated,
-                )
-            )
 
         return session_summary
 
@@ -538,9 +505,9 @@ class Memory:
     def _upsert_db_memory(self, memory: MemoryRow) -> str:
         """Use this function to add a memory to the database."""
         try:
-            if not self.memory_db:
+            if not self.db:
                 raise ValueError("Memory db not initialized")
-            self.memory_db.upsert_memory(memory)
+            self.db.upsert_memory(memory)
             return "Memory added successfully"
         except Exception as e:
             logger.warning(f"Error storing memory in db: {e}")
@@ -549,35 +516,13 @@ class Memory:
     def _delete_db_memory(self, memory_id: str) -> str:
         """Use this function to delete a memory from the database."""
         try:
-            if not self.memory_db:
+            if not self.db:
                 raise ValueError("Memory db not initialized")
-            self.memory_db.delete_memory(memory_id=memory_id)
+            self.db.delete_memory(memory_id=memory_id)
             return "Memory deleted successfully"
         except Exception as e:
             logger.warning(f"Error deleting memory in db: {e}")
             return f"Error deleting memory: {e}"
-
-    def _upsert_db_summary(self, summary: SummaryRow) -> str:
-        """Use this function to add a summary to the database."""
-        try:
-            if not self.summary_db:
-                raise ValueError("Summary db not initialized")
-            self.summary_db.upsert_summary(summary)
-            return "Summary added successfully"
-        except Exception as e:
-            logger.warning(f"Error storing summary in db: {e}")
-            return f"Error adding summary: {e}"
-
-    def _delete_db_summary(self, session_id: str) -> str:
-        """Use this function to delete a summary from the database."""
-        try:
-            if not self.summary_db:
-                raise ValueError("Summary db not initialized")
-            self.summary_db.delete_summary(session_id=session_id)
-            return "Summary deleted successfully"
-        except Exception as e:
-            logger.warning(f"Error deleting summary in db: {e}")
-            return f"Error deleting summary: {e}"
 
     # -*- Utility Functions
     def get_messages_for_session(
@@ -883,10 +828,8 @@ class Memory:
 
     def clear(self) -> None:
         """Clears the memory."""
-        if self.memory_db:
-            self.memory_db.clear()
-        if self.summary_db:
-            self.summary_db.clear()
+        if self.db:
+            self.db.clear()
         self.memories = {}
         self.summaries = {}
 
@@ -898,15 +841,14 @@ class Memory:
 
         # Manually deepcopy fields that are known to be safe
         for field_name, field_value in self.__dict__.items():
-            if field_name not in ["memory_db", "summary_db", "memory_manager", "summary_manager"]:
+            if field_name not in ["db", "memory_manager", "summary_manager"]:
                 try:
                     setattr(copied_obj, field_name, deepcopy(field_value))
                 except Exception as e:
                     logger.warning(f"Failed to deepcopy field: {field_name} - {e}")
                     setattr(copied_obj, field_name, field_value)
 
-        copied_obj.memory_db = self.memory_db
-        copied_obj.summary_db = self.summary_db
+        copied_obj.db = self.db
         copied_obj.memory_manager = self.memory_manager
         copied_obj.summary_manager = self.summary_manager
 

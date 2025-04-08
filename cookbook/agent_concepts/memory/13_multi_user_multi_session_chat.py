@@ -18,7 +18,7 @@ agent_storage = SqliteStorage(
 )
 memory_db = SqliteMemoryDb(table_name="memory", db_file="tmp/memory.db")
 
-memory = Memory(model=Claude(id="claude-3-5-sonnet-20241022"), memory_db=memory_db)
+memory = Memory(model=Claude(id="claude-3-5-sonnet-20241022"), db=memory_db)
 
 # Reset the memory for this example
 memory.clear()
