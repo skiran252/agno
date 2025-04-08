@@ -5396,7 +5396,8 @@ class Team:
             await acreate_team(
                 team=TeamCreate(
                     team_id=self.team_id,
-                    team_data=self._get_team_data(),
+                    name=self.name,
+                    config=self._get_team_data(),
                 ),
             )
         except Exception as e:

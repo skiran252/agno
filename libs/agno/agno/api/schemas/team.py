@@ -23,5 +23,6 @@ class TeamCreate(BaseModel):
     """Data sent to API to create aTeam"""
 
     team_id: str
-    team_data: Optional[Dict[str, Any]] = None
+    name: Optional[str] = None
+    config: Dict[str, Any]
 
