@@ -52,8 +52,9 @@ def get_session_title(session: Union[AgentSession, TeamSession]) -> str:
     memory = session.memory
     if memory is not None:
         # Proxy for knowing it is legacy memory implementation
-        runs = memory.get("runs") or memory.get("chats")
+        runs = memory.get("runs")
         runs = cast(List[Any], runs)
+        
         for _run in runs:
             try:
                 if "response" in _run:
@@ -69,13 +70,12 @@ def get_session_title(session: Union[AgentSession, TeamSession]) -> str:
                         run_parsed = RunResponse.from_dict(_run)
                     else:
                         run_parsed = TeamRunResponse.from_dict(_run)
-
-                    if run_parsed.messages is not None and len(run_parsed.messages) > 0 and run_parsed.messages[0].role == "user":
-                        content = run_parsed.messages[0].get_content_string()
-                        if content:
-                            return content
-                        else:
-                            return "No title"
+                    if run_parsed.messages is not None and len(run_parsed.messages) > 0:
+                        for msg in run_parsed.messages:
+                            if msg.role == "user":
+                                content = msg.get_content_string()
+                                if content:
+                                    return content
 
             except Exception as e:
                 logger.error(f"Error parsing chat: {e}")
@@ -135,15 +135,29 @@ def get_session_title_from_team_session(team_session: TeamSession) -> str:
     if memory is not None:
         runs = memory.get("runs")
         runs = cast(List[Any], runs)
+        
         for _run in runs:
             try:
-                run_parsed = AgentRun.model_validate(_run)
-                if run_parsed.message is not None and run_parsed.message.role == "user":
-                    content = run_parsed.message.get_content_string()
-                    if content:
-                        return content
+                if "response" in _run:
+                    run_parsed = AgentRun.model_validate(_run)
+                    if run_parsed.message is not None and run_parsed.message.role == "user":
+                        content = run_parsed.message.get_content_string()
+                        if content:
+                            return content
+                        else:
+                            return "No title"
+                else:
+                    if "agent_id" in _run:
+                        run_parsed = RunResponse.from_dict(_run)
                     else:
-                        return "No title"
+                        run_parsed = TeamRunResponse.from_dict(_run)
+                    if run_parsed.messages is not None and len(run_parsed.messages) > 0:
+                        for msg in run_parsed.messages:
+                            if msg.role == "user":
+                                content = msg.get_content_string()
+                                if content:
+                                    return content
+
             except Exception as e:
                 logger.error(f"Error parsing chat: {e}")
     return "Unnamed session"

@@ -391,7 +391,21 @@ def get_async_playground_router(
         if agent_session is None:
             return JSONResponse(status_code=404, content="Session not found.")
 
-        return agent_session
+        agent_session_dict = agent_session.to_dict()
+        if agent_session.memory is not None:
+            if isinstance(agent_session.memory, Memory):
+                agent_session_dict["runs"] =[]
+                for run in agent_session.memory.get("runs"):
+                    first_user_message = None
+                    for msg in run.get("messages", []):
+                        if msg.get("role") == "user":
+                            first_user_message = msg
+                            break
+                    agent_session_dict["runs"].append({
+                        "message": first_user_message,
+                        "response": run,
+                    })
+        return agent_session_dict
 
     @playground_router.post("/agents/{agent_id}/sessions/{session_id}/rename")
     async def rename_agent_session(agent_id: str, session_id: str, body: AgentRenameRequest):
@@ -740,7 +754,22 @@ def get_async_playground_router(
         if not team_session:
             raise HTTPException(status_code=404, detail="Session not found")
 
-        return team_session
+        team_session_dict = team_session.to_dict()
+        if team_session.memory is not None:
+            if isinstance(team_session.memory, Memory):
+                team_session_dict["runs"] =[]
+                for run in team_session.memory.get("runs"):
+                    first_user_message = None
+                    for msg in run.get("messages", []):
+                        if msg.get("role") == "user":
+                            first_user_message = msg
+                            break
+                    team_session_dict["runs"].append({
+                        "message": first_user_message,
+                        "response": run,
+                    })
+                
+        return team_session_dict
 
     @playground_router.post("/teams/{team_id}/sessions/{session_id}/rename")
     async def rename_team_session(team_id: str, session_id: str, body: TeamRenameRequest):
