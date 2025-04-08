@@ -204,6 +204,7 @@ agent_team = Team(
         "If you are given a file send it to the file agent.",
         "If you are given an audio file send it to the audio agent.",
         "If you are given a video file send it to the video agent.",
+        "Use USD as currency.",
     ],
     add_datetime_to_instructions=True,
     show_tool_calls=True,
@@ -219,8 +220,6 @@ agent_team = Team(
     memory=memory,
     create_user_memories=True,
     expected_output="A good financial news report.",
-    context={"currency": "use USD as currency"},
-    add_context=True,
 )
 
 app = Playground(

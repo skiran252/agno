@@ -5561,52 +5561,53 @@ class Team:
                             log_warning(f"Failed to load user memories: {e}")
                 except Exception as e:
                     log_warning(f"Failed to load TeamMemory: {e}")
-            # elif isinstance(self.memory, Memory):
-            #     if "runs" in session.memory:
-            #         try:
-            #             if self.memory.runs is None:
-            #                 self.memory.runs = {}
-            #             for session_id, runs in session.memory["runs"].items():
-            #                 self.memory.runs[session_id] = []
-            #                 for m in runs:
-            #                     if "team_id" in m:
-            #                         self.memory.runs[session_id].append(TeamRunResponse.from_dict(m))
-            #                     else:
-            #                         self.memory.runs[session_id].append(RunResponse.from_dict(m))
-            #         except Exception as e:
-            #             log_warning(f"Failed to load runs from memory: {e}")
-            #     if 'team_context' in session.memory:
-            #         try:
-            #             self.memory.team_context = {
-            #                 session_id: TeamContext.from_dict(team_context) for session_id, team_context in session.memory["team_context"].items()
-            #             }
-            #         except Exception as e:
-            #             log_warning(f"Failed to load team context: {e}")
-            #     if "memories" in session.memory:
-            #         from agno.memory_v2.memory import UserMemory as UserMemoryV2
-            #
-            #         try:
-            #             self.memory.memories = {
-            #                 user_id: {
-            #                     memory_id: UserMemoryV2.from_dict(memory) for memory_id, memory in user_memories.items()
-            #                 }
-            #                 for user_id, user_memories in session.memory["memories"].items()
-            #             }
-            #         except Exception as e:
-            #             log_warning(f"Failed to load user memories: {e}")
-            #     if "summaries" in session.memory:
-            #         from agno.memory_v2.memory import SessionSummary as SessionSummaryV2
-            #
-            #         try:
-            #             self.memory.summaries = {
-            #                 user_id: {
-            #                     session_id: SessionSummaryV2.from_dict(summary)
-            #                     for session_id, summary in user_session_summaries.items()
-            #                 }
-            #                 for user_id, user_session_summaries in session.memory["summaries"].items()
-            #             }
-            #         except Exception as e:
-            #             log_warning(f"Failed to load session summaries: {e}")
+            elif isinstance(self.memory, Memory):
+                if "runs" in session.memory:
+                    try:
+                        if self.memory.runs is None:
+                            self.memory.runs = {}
+                        for run in session.memory["runs"]:
+                            session_id = run["session_id"]
+                            self.memory.runs[session_id] = []
+                            if "team_id" in run:
+                                self.memory.runs[session_id].append(TeamRunResponse.from_dict(run))
+                            else:
+                                self.memory.runs[session_id].append(RunResponse.from_dict(run))
+                    except Exception as e:
+                        log_warning(f"Failed to load runs from memory: {e}")
+                if 'team_context' in session.memory:
+                    from agno.memory_v2.memory import TeamContext
+                    try:
+                        self.memory.team_context = {
+                            session_id: TeamContext.from_dict(team_context) for session_id, team_context in session.memory["team_context"].items()
+                        }
+                    except Exception as e:
+                        log_warning(f"Failed to load team context: {e}")
+                if "memories" in session.memory:
+                    from agno.memory_v2.memory import UserMemory as UserMemoryV2
+            
+                    try:
+                        self.memory.memories = {
+                            user_id: {
+                                memory_id: UserMemoryV2.from_dict(memory) for memory_id, memory in user_memories.items()
+                            }
+                            for user_id, user_memories in session.memory["memories"].items()
+                        }
+                    except Exception as e:
+                        log_warning(f"Failed to load user memories: {e}")
+                if "summaries" in session.memory:
+                    from agno.memory_v2.memory import SessionSummary as SessionSummaryV2
+            
+                    try:
+                        self.memory.summaries = {
+                            user_id: {
+                                session_id: SessionSummaryV2.from_dict(summary)
+                                for session_id, summary in user_session_summaries.items()
+                            }
+                            for user_id, user_session_summaries in session.memory["summaries"].items()
+                        }
+                    except Exception as e:
+                        log_warning(f"Failed to load session summaries: {e}")
         log_debug(f"-*- TeamSession loaded: {session.session_id}")
 
     ###########################################################################
