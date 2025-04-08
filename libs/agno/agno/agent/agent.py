@@ -2409,10 +2409,10 @@ class Agent:
             system_message_content += f"{self.description}\n\n"
         # 3.3.2 Then add the Agent goal if provided
         if self.goal is not None:
-            system_message_content += f"<your_goal>\n{self.goal}\n</your_goal>\n\n"
+            system_message_content += f"\n<your_goal>\n{self.goal}\n</your_goal>\n\n"
         # 3.3.3 Then add the Agent role if provided
         if self.role is not None:
-            system_message_content += f"<your_role>\n{self.role}\n</your_role>\n\n"
+            system_message_content += f"\n<your_role>\n{self.role}\n</your_role>\n\n"
         # 3.3.4 Then add instructions for transferring tasks to team members
         if self.has_team and self.add_transfer_instructions:
             system_message_content += (
@@ -4117,6 +4117,7 @@ class Agent:
         videos: Optional[Sequence[Video]] = None,
         files: Optional[Sequence[File]] = None,
         stream: bool = False,
+        stream_intermediate_steps: bool = False,
         markdown: bool = False,
         show_message: bool = True,
         show_reasoning: bool = True,
@@ -4141,6 +4142,8 @@ class Agent:
         if self.response_model is not None:
             self.markdown = False
             stream = False
+
+        stream_intermediate_steps = stream_intermediate_steps or self.stream_intermediate_steps
 
         if stream:
             _response_content: str = ""
@@ -4180,6 +4183,7 @@ class Agent:
                     videos=videos,
                     files=files,
                     stream=True,
+                    stream_intermediate_steps=stream_intermediate_steps,
                     **kwargs,
                 ):
                     if isinstance(resp, RunResponse):
@@ -4337,6 +4341,7 @@ class Agent:
                     videos=videos,
                     files=files,
                     stream=False,
+                    stream_intermediate_steps=stream_intermediate_steps,
                     **kwargs,
                 )
                 response_timer.stop()
@@ -4466,6 +4471,7 @@ class Agent:
         videos: Optional[Sequence[Video]] = None,
         files: Optional[Sequence[File]] = None,
         stream: bool = False,
+        stream_intermediate_steps: bool = False,
         markdown: bool = False,
         show_message: bool = True,
         show_reasoning: bool = True,
@@ -4490,6 +4496,8 @@ class Agent:
         if self.response_model is not None:
             self.markdown = False
             stream = False
+
+        stream_intermediate_steps = stream_intermediate_steps or self.stream_intermediate_steps
 
         if stream:
             _response_content: str = ""
@@ -4529,6 +4537,7 @@ class Agent:
                     videos=videos,
                     files=files,
                     stream=True,
+                    stream_intermediate_steps=stream_intermediate_steps,
                     **kwargs,
                 ):
                     if isinstance(resp, RunResponse):
@@ -4686,6 +4695,7 @@ class Agent:
                     videos=videos,
                     files=files,
                     stream=False,
+                    stream_intermediate_steps=stream_intermediate_steps,
                     **kwargs,
                 )
                 response_timer.stop()
