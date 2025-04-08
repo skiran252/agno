@@ -5381,7 +5381,8 @@ class Team:
             create_team(
                 team=TeamCreate(
                     team_id=self.team_id,
-                    team_data=self._get_team_data(),
+                    name=self.name,
+                    config=self.to_dict(),
                 ),
             )
         except Exception as e:
@@ -5397,9 +5398,22 @@ class Team:
                 team=TeamCreate(
                     team_id=self.team_id,
                     name=self.name,
-                    config=self._get_team_data(),
+                    config=self.to_dict(),
                 ),
             )
         except Exception as e:
             print(f"Could not create team on platform: {e}")
             log_debug(f"Could not create team on platform: {e}")
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "members": [member.to_dict() for member in self.members],
+            "mode": self.mode,
+            "model": self.model.to_dict() if self.model is not None else None,
+            "name": self.name,
+            "instructions": self.instructions,
+            "description": self.description,
+            "storage": self.storage.to_dict() if self.storage is not None else None,
+            "tools": [tool.to_dict() for tool in self.tools] if self.tools is not None else None,
+            "memory": self.memory.to_dict() if self.memory is not None else None,
+        }

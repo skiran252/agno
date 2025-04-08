@@ -3781,12 +3781,7 @@ class Agent:
                 agent=AgentCreate(
                     name=self.name,
                     agent_id=self.agent_id,
-                    config={
-                        "instructions": self.instructions if self.instructions is not None else [],
-                        "tools": self.tools if self.tools is not None else [],
-                        "knowledge": self.knowledge.__class__.__name__ if self.knowledge is not None else None,
-                        "storage": self.storage.__class__.__name__ if self.storage is not None else None,
-                    },
+                    config=self.to_dict()
                 )
             )
         except Exception as e:
@@ -4561,3 +4556,11 @@ class Agent:
                 break
 
             self.print_response(message=message, stream=stream, markdown=markdown, **kwargs)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "instructions": self.instructions if self.instructions is not None else [],
+            "tools": self.tools if self.tools is not None else [],
+            "knowledge": self.knowledge.__class__.__name__ if self.knowledge is not None else None,
+            "storage": self.storage.__class__.__name__ if self.storage is not None else None,
+        }
