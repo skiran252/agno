@@ -541,6 +541,9 @@ class Agent:
         self.run_id = str(uuid4())
         self.run_response = RunResponse(run_id=self.run_id, session_id=self.session_id, agent_id=self.agent_id)
 
+        if self.register_on_platform:
+            self._register_agent_on_platform()
+
         log_debug(f"Agent Run Start: {self.run_response.run_id}", center=True)
 
         # 2. Update the Model and resolve context
@@ -856,9 +859,6 @@ class Agent:
         # Log Agent Run
         def log_and_register():
             self._log_agent_run()
-            if self.register_on_platform:
-                self._register_agent_on_platform()
-
         # Start the log_and_register function in a separate thread
         thread = threading.Thread(target=log_and_register)
         thread.start()
@@ -1079,9 +1079,10 @@ class Agent:
 
         # 1.4 Register the agent on the platform
         if self.register_on_platform:
-            # t = threading.Thread(target=self._register_agent_on_platform, daemon=True)
-            # t.start()
-            self._register_agent_on_platform()
+            def _run_async_in_thread(coro):
+                asyncio.run(coro)
+            t = threading.Thread(target=_run_async_in_thread, args=(self._aregister_agent_on_platform(),), daemon=True)
+            t.start()
 
         log_debug(f"Async Agent Run Start: {self.run_response.run_id}", center=True, symbol="*")
 
@@ -3761,14 +3762,9 @@ class Agent:
             print("registering agent on", self.run_id, self.agent_id, self.name)
             create_agent(
                 app=AgentCreate(
-                name=self.name,
+                    name=self.name,
                     agent_id=self.agent_id,
-                    agent_config={
-                        "instructions": self.instructions,
-                        "tools": self.tools,
-                        "knowledge": self.knowledge.__class__.__name__ if self.knowledge is not None else None,
-                        "storage": self.storage.__class__.__name__ if self.storage is not None else None,
-                    },
+                    config=self.to_platform_dict()
                 )
             )
         except Exception as e:
@@ -3782,7 +3778,6 @@ class Agent:
 
         try:
             print("async creating agent on", self.run_id, self.agent_id, self.name)
-            print("config", self.to_dict())
             await acreate_agent(
                 agent=AgentCreate(
                     name=self.name,
