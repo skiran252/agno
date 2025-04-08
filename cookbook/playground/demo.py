@@ -31,7 +31,7 @@ simple_agent = Agent(
     add_datetime_to_instructions=True,
     markdown=True,
     instructions=[
-        "Always answer like a pirate",
+        "Never answer like a pirats",
     ],
     register_on_platform=True,
 )

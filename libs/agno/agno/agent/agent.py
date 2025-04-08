@@ -1077,6 +1077,10 @@ class Agent:
         self.run_id = str(uuid4())
         self.run_response = RunResponse(run_id=self.run_id, session_id=self.session_id, agent_id=self.agent_id)
 
+        # 1.4 Register the agent on the platform
+        if self.register_on_platform:
+            asyncio.create_task(self._aregister_agent_on_platform())
+
         log_debug(f"Async Agent Run Start: {self.run_response.run_id}", center=True, symbol="*")
 
         # 2. Update the Model and resolve context
@@ -1390,8 +1394,6 @@ class Agent:
         # Log Agent Run
         async def alog_and_register():
             await self._alog_agent_run()
-            if self.register_on_platform:
-                await self._aregister_agent_on_platform()
 
         # Define a synchronous wrapper to run the async function
         def run_async_in_thread():
@@ -3777,6 +3779,7 @@ class Agent:
 
         try:
             print("async creating agent on", self.run_id, self.agent_id, self.name)
+            print("config", self.to_dict())
             await acreate_agent(
                 agent=AgentCreate(
                     name=self.name,
@@ -4561,6 +4564,5 @@ class Agent:
         return {
             "instructions": self.instructions if self.instructions is not None else [],
             "tools": self.tools if self.tools is not None else [],
-            "knowledge": self.knowledge.__class__.__name__ if self.knowledge is not None else None,
             "storage": self.storage.__class__.__name__ if self.storage is not None else None,
         }
