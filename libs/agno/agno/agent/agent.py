@@ -1079,7 +1079,9 @@ class Agent:
 
         # 1.4 Register the agent on the platform
         if self.register_on_platform:
-            asyncio.create_task(self._aregister_agent_on_platform())
+            # t = threading.Thread(target=self._register_agent_on_platform, daemon=True)
+            # t.start()
+            self._register_agent_on_platform()
 
         log_debug(f"Async Agent Run Start: {self.run_response.run_id}", center=True, symbol="*")
 
@@ -3756,6 +3758,7 @@ class Agent:
         from agno.api.agent import AgentCreate, create_agent
 
         try:
+            print("registering agent on", self.run_id, self.agent_id, self.name)
             create_agent(
                 app=AgentCreate(
                 name=self.name,
@@ -3784,7 +3787,7 @@ class Agent:
                 agent=AgentCreate(
                     name=self.name,
                     agent_id=self.agent_id,
-                    config=self.to_dict()
+                    config=self.to_platform_dict()
                 )
             )
         except Exception as e:
@@ -4560,9 +4563,12 @@ class Agent:
 
             self.print_response(message=message, stream=stream, markdown=markdown, **kwargs)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_platform_dict(self) -> Dict[str, Any]:
         return {
             "instructions": self.instructions if self.instructions is not None else [],
-            "tools": self.tools if self.tools is not None else [],
+            # "tools": self.tools if self.tools is not None else [],
             "storage": self.storage.__class__.__name__ if self.storage is not None else None,
+            "model": self.model.to_dict() if self.model is not None else None,
+            "name": self.name,
+            "description": self.description,
         }
