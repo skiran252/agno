@@ -2154,7 +2154,6 @@ class Agent:
                 except Exception as e:
                     log_warning(f"Failed to load AgentMemory: {e}")
             elif isinstance(self.memory, Memory):
-                # We only need to rebuild runs if they are not already set
                 if "runs" in session.memory:
                     try:
                         if self.memory.runs is None:

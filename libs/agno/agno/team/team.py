@@ -5540,7 +5540,7 @@ class Team:
             else:
                 raise TypeError(f"Expected memory to be a dict or TeamMemory, but got {type(self.memory)}")
 
-        if session.memory is not None and self.memory is not None:
+        if session.memory is not None:
             if isinstance(self.memory, TeamMemory):
                 try:
                     if "runs" in session.memory:
