@@ -2026,7 +2026,8 @@ class Agent:
                 self.memory = cast(Memory, self.memory)
                 # We fake the structure on storage, to maintain the interface with the legacy implementation
                 run_responses = self.memory.runs[session_id]  # type: ignore
-                memory_dict = {"runs": [rr.to_dict() for rr in run_responses]}
+                memory_dict = self.memory.to_dict()
+                memory_dict["runs"] = [rr.to_dict() for rr in run_responses]
         else:
             memory_dict = None
 
@@ -2167,13 +2168,13 @@ class Agent:
                     try:
                         if self.memory.runs is None:
                             self.memory.runs = {}
+                        self.memory.runs[session.session_id] = []
                         for run in session.memory["runs"]:
-                            session_id = run["session_id"]
-                            self.memory.runs[session_id] = []
+                            run_session_id = run["session_id"]
                             if "team_id" in run:
-                                self.memory.runs[session_id].append(TeamRunResponse.from_dict(run))
+                                self.memory.runs[run_session_id].append(TeamRunResponse.from_dict(run))
                             else:
-                                self.memory.runs[session_id].append(RunResponse.from_dict(run))
+                                self.memory.runs[run_session_id].append(RunResponse.from_dict(run))
                     except Exception as e:
                         log_warning(f"Failed to load runs from memory: {e}")
                 if "memories" in session.memory:
@@ -2213,9 +2214,11 @@ class Agent:
         Returns:
             Optional[AgentSession]: The loaded AgentSession or None if not found.
         """
-        if self.storage is not None and session_id is not None:
+        if self.storage is not None:
+            # Get a single session from storage
             self.agent_session = cast(AgentSession, self.storage.read(session_id=session_id))
             if self.agent_session is not None:
+                # Load the agent session
                 self.load_agent_session(session=self.agent_session)
             self.load_user_memories(user_id=user_id)
         return self.agent_session
@@ -3206,35 +3209,39 @@ class Agent:
                 session_metrics += m.metrics
         return session_metrics
 
-    def rename(self, name: str) -> None:
+    def rename(self, name: str, session_id: Optional[str] = None) -> None:
         """Rename the Agent and save to storage"""
 
-        if self.session_id is None:
+        if self.session_id is None and session_id is None:
             raise Exception("Session ID is not set")
 
+        session_id = session_id or self.session_id
+
         # -*- Read from storage
-        self.read_from_storage(user_id=self.user_id, session_id=self.session_id)  # type: ignore
+        self.read_from_storage(user_id=self.user_id, session_id=session_id)  # type: ignore
         # -*- Rename Agent
         self.name = name
         # -*- Save to storage
-        self.write_to_storage(user_id=self.user_id, session_id=self.session_id)  # type: ignore
+        self.write_to_storage(user_id=self.user_id, session_id=session_id)  # type: ignore
         # -*- Log Agent session
-        self._log_agent_session(user_id=self.user_id, session_id=self.session_id)  # type: ignore
+        self._log_agent_session(user_id=self.user_id, session_id=session_id)  # type: ignore
 
-    def rename_session(self, session_name: str) -> None:
+    def rename_session(self, session_name: str, session_id: Optional[str] = None) -> None:
         """Rename the current session and save to storage"""
 
-        if self.session_id is None:
+        if self.session_id is None and session_id is None:
             raise Exception("Session ID is not set")
 
+        session_id = session_id or self.session_id
+
         # -*- Read from storage
-        self.read_from_storage(user_id=self.user_id, session_id=self.session_id)
+        self.read_from_storage(user_id=self.user_id, session_id=session_id)  # type: ignore
         # -*- Rename session
         self.session_name = session_name
         # -*- Save to storage
-        self.write_to_storage(user_id=self.user_id, session_id=self.session_id)  # type: ignore
+        self.write_to_storage(user_id=self.user_id, session_id=session_id)  # type: ignore
         # -*- Log Agent session
-        self._log_agent_session(user_id=self.user_id, session_id=self.session_id)  # type: ignore
+        self._log_agent_session(user_id=self.user_id, session_id=session_id)  # type: ignore
 
     def generate_session_name(self, session_id: str) -> str:
         """Generate a name for the session using the first 6 messages from the memory"""

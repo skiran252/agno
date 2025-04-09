@@ -5472,9 +5472,11 @@ class Team:
         Returns:
             Optional[TeamSession]: The loaded TeamSession or None if not found.
         """
-        if self.storage is not None and session_id is not None:
+        if self.storage is not None:
+            # Get a single session from storage
             self.team_session = cast(TeamSession, self.storage.read(session_id=session_id))
             if self.team_session is not None:
+                # Load the team session
                 self.load_team_session(session=self.team_session)
             self.load_user_memories(user_id=user_id)
         return self.team_session
@@ -5491,18 +5493,21 @@ class Team:
             )
         return self.team_session
 
-    def rename_session(self, session_name: str) -> None:
+    def rename_session(self, session_name: str, session_id: Optional[str] = None) -> None:
         """Rename the current session and save to storage"""
-        if self.session_id is None:
+        if self.session_id is None and session_id is None:
             raise ValueError("Session ID is not initialized")
+
+        session_id = session_id or self.session_id
+
         # -*- Read from storage
-        self.read_from_storage(session_id=self.session_id, user_id=self.user_id)
+        self.read_from_storage(session_id=session_id, user_id=self.user_id)
         # -*- Rename session
         self.session_name = session_name
         # -*- Save to storage
-        self.write_to_storage(session_id=self.session_id, user_id=self.user_id)
+        self.write_to_storage(session_id=session_id, user_id=self.user_id)
         # -*- Log Agent session
-        self._log_team_session(session_id=self.session_id, user_id=self.user_id)
+        self._log_team_session(session_id=session_id, user_id=self.user_id)
 
     def delete_session(self, session_id: str) -> None:
         """Delete the current session and save to storage"""
@@ -5518,6 +5523,8 @@ class Team:
             self.team_id = session.team_id
         if self.user_id is None and session.user_id is not None:
             self.user_id = session.user_id
+        
+        # Set global session ID
         if self.session_id is None and session.session_id is not None:
             self.session_id = session.session_id
 
@@ -5583,6 +5590,7 @@ class Team:
             # Update the current extra_data with the extra_data from the database which is updated in place
             self.extra_data = session.extra_data
 
+        # Set the memory
         if self.memory is None:
             self.memory = session.memory  # type: ignore
 
@@ -5624,13 +5632,15 @@ class Team:
                     try:
                         if self.memory.runs is None:
                             self.memory.runs = {}
+                            
+                        # Only hydrate the runs for the current session ID (not all runs in memory)
+                        self.memory.runs[session.session_id] = []
                         for run in session.memory["runs"]:
-                            session_id = run["session_id"]
-                            self.memory.runs[session_id] = []
+                            run_session_id = run["session_id"]
                             if "team_id" in run:
-                                self.memory.runs[session_id].append(TeamRunResponse.from_dict(run))
+                                self.memory.runs[run_session_id].append(TeamRunResponse.from_dict(run))
                             else:
-                                self.memory.runs[session_id].append(RunResponse.from_dict(run))
+                                self.memory.runs[session.session_id].append(RunResponse.from_dict(run))
                     except Exception as e:
                         log_warning(f"Failed to load runs from memory: {e}")
                 if "team_context" in session.memory:
@@ -5741,8 +5751,10 @@ class Team:
             else:
                 self.memory = cast(Memory, self.memory)
                 # We fake the structure on storage, to maintain the interface with the legacy implementation
+                # We only persist the runs for the current session ID (not all runs in memory)
                 run_responses = self.memory.runs[session_id]  # type: ignore
-                memory_dict = {"runs": [rr.to_dict() for rr in run_responses]}
+                memory_dict = self.memory.to_dict()
+                memory_dict["runs"] = [rr.to_dict() for rr in run_responses]
         else:
             memory_dict = None
 
