@@ -4559,11 +4559,46 @@ class Agent:
             self.print_response(message=message, stream=stream, markdown=markdown, **kwargs)
 
     def to_platform_dict(self) -> Dict[str, Any]:
-        return {
+
+
+        tools = []
+        if self.tools is not None:
+            for tool in self.tools:
+                functions = []
+                for function in tool.functions.keys():
+                    print(function)
+                    functions.append({
+                        "name": function,
+                        "parameters": tool.functions[function].to_dict()
+                    })
+                tools.append({
+                    "name": tool.name,
+                    "functions": functions
+                })
+
+        model = None
+        if self.model is not None:
+            model = {
+                "name": self.model.__class__.__name__,
+                "id": self.model.id,
+                "provider": self.model.provider,
+                "response_format": self.model.response_format,
+            }
+
+        payload = {
             "instructions": self.instructions if self.instructions is not None else [],
-            # "tools": self.tools if self.tools is not None else [],
-            "storage": self.storage.__class__.__name__ if self.storage is not None else None,
-            "model": self.model.to_dict() if self.model is not None else None,
+            "tools": tools,
+            "memory": {
+                "name": self.memory.__class__.__name__ if self.memory is not None else None,
+            },
+            "storage": {
+                "name": self.storage.__class__.__name__ if self.storage is not None else None,
+            },
+            "knowledge": {
+                "name": self.knowledge.__class__.__name__ if self.knowledge is not None else None,
+            },
+            "model": model,
             "name": self.name,
             "description": self.description,
         }
+        return payload
