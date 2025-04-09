@@ -461,7 +461,6 @@ class Agent:
     def set_agent_id(self) -> str:
         if self.agent_id is None:
             self.agent_id = str(uuid4())
-        log_debug(f"Agent ID: {self.agent_id}", center=True)
         return self.agent_id
 
     def set_debug(self) -> None:

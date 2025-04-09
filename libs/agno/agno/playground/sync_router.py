@@ -411,7 +411,7 @@ def get_sync_playground_router(
                             }
                         )
 
-        return agent_session
+        return agent_session_dict
 
     @playground_router.post("/agents/{agent_id}/sessions/{session_id}/rename")
     def rename_agent_session(agent_id: str, session_id: str, body: AgentRenameRequest):
@@ -425,8 +425,7 @@ def get_sync_playground_router(
         all_agent_sessions: List[AgentSession] = agent.storage.get_all_sessions(user_id=body.user_id)  # type: ignore
         for session in all_agent_sessions:
             if session.session_id == session_id:
-                agent.session_id = session_id
-                agent.rename_session(body.name)
+                agent.rename_session(body.name, session_id=session_id)
                 return JSONResponse(content={"message": f"successfully renamed agent {agent.name}"})
 
         return JSONResponse(status_code=404, content="Session not found.")
@@ -781,7 +780,7 @@ def get_sync_playground_router(
                                 "response": run,
                             }
                         )
-        return team_session
+        return team_session_dict
 
     @playground_router.post("/teams/{team_id}/sessions/{session_id}/rename")
     def rename_team_session(team_id: str, session_id: str, body: TeamRenameRequest):
@@ -789,9 +788,16 @@ def get_sync_playground_router(
         if team is None:
             raise HTTPException(status_code=404, detail="Team not found")
 
-        team.session_id = session_id
-        team.rename_session(body.name)
-        return JSONResponse(content={"message": f"successfully renamed team {team.name}"})
+        if team.storage is None:
+            raise HTTPException(status_code=404, detail="Team does not have storage enabled")
+
+        all_team_sessions: List[TeamSession] = team.storage.get_all_sessions(user_id=body.user_id, entity_id=team_id)  # type: ignore
+        for session in all_team_sessions:
+            if session.session_id == session_id:
+                team.rename_session(body.name, session_id=session_id)
+                return JSONResponse(content={"message": f"successfully renamed team session {body.name}"})
+
+        raise HTTPException(status_code=404, detail="Session not found")
 
     @playground_router.delete("/teams/{team_id}/sessions/{session_id}")
     def delete_team_session(team_id: str, session_id: str):
@@ -799,8 +805,16 @@ def get_sync_playground_router(
         if team is None:
             raise HTTPException(status_code=404, detail="Team not found")
 
-        team.delete_session(session_id)
-        return JSONResponse(content={"message": f"successfully deleted team {team.name}"})
+        if team.storage is None:
+            raise HTTPException(status_code=404, detail="Team does not have storage enabled")
+
+        all_team_sessions: List[TeamSession] = team.storage.get_all_sessions(user_id=user_id, entity_id=team_id)  # type: ignore
+        for session in all_team_sessions:
+            if session.session_id == session_id:
+                team.delete_session(session_id)
+                return JSONResponse(content={"message": f"successfully deleted team session {session_id}"})
+
+        raise HTTPException(status_code=404, detail="Session not found")
 
     @playground_router.get("/team/{team_id}/memories")
     async def get_team_memories(team_id: str, user_id: str = Query(..., min_length=1)):
