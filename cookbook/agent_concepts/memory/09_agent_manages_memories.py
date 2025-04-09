@@ -5,7 +5,7 @@ Every time you run this, the `Memory` object will be re-initialized from the DB.
 """
 
 from agno.agent.agent import Agent
-from agno.memory_v2.db.memory.sqlite import SqliteMemoryDb
+from agno.memory_v2.db.sqlite import SqliteMemoryDb
 from agno.memory_v2.memory import Memory
 from agno.models.google.gemini import Gemini
 
@@ -37,3 +37,14 @@ memories = memory.get_user_memories(user_id=john_doe_id)
 print("John Doe's memories:")
 for i, m in enumerate(memories):
     print(f"{i}: {m.memory}")
+
+
+agent.print_response("Remove all existing memories of me.", stream=True, user_id=john_doe_id)
+
+memories = memory.get_user_memories(user_id=john_doe_id)
+print("John Doe's memory count:", len(memories))
+
+agent.print_response("My name is Salvador Dali and I like to paint.", stream=True, user_id=john_doe_id)
+
+memories = memory.get_user_memories(user_id=john_doe_id)
+print("John Doe's memory count:", len(memories))

@@ -30,7 +30,8 @@ from agno.exceptions import ModelProviderError, RunCancelledException
 from agno.media import Audio, AudioArtifact, AudioResponse, File, Image, ImageArtifact, Video, VideoArtifact
 from agno.memory.agent import AgentMemory
 from agno.memory.team import TeamMemory, TeamRun
-from agno.memory_v2.memory import Memory, SessionSummary
+from agno.memory_v2.memory import Memory
+from agno.memory_v2.schema import SessionSummary, SessionSummary as SessionSummaryV2
 from agno.models.base import Model
 from agno.models.message import Citations, Message
 from agno.models.response import ModelResponse, ModelResponseEvent
@@ -5526,7 +5527,7 @@ class Team:
             self.team_id = session.team_id
         if self.user_id is None and session.user_id is not None:
             self.user_id = session.user_id
-        
+
         # Set global session ID
         if self.session_id is None and session.session_id is not None:
             self.session_id = session.session_id
@@ -5635,7 +5636,7 @@ class Team:
                     try:
                         if self.memory.runs is None:
                             self.memory.runs = {}
-                            
+
                         # Only hydrate the runs for the current session ID (not all runs in memory)
                         self.memory.runs[session.session_id] = []
                         for run in session.memory["runs"]:
@@ -5657,7 +5658,7 @@ class Team:
                     except Exception as e:
                         log_warning(f"Failed to load team context: {e}")
                 if "memories" in session.memory:
-                    from agno.memory_v2.memory import UserMemory as UserMemoryV2
+                    from agno.memory_v2.schema import UserMemory as UserMemoryV2
 
                     try:
                         self.memory.memories = {
@@ -5669,7 +5670,6 @@ class Team:
                     except Exception as e:
                         log_warning(f"Failed to load user memories: {e}")
                 if "summaries" in session.memory:
-                    from agno.memory_v2.memory import SessionSummary as SessionSummaryV2
 
                     try:
                         self.memory.summaries = {

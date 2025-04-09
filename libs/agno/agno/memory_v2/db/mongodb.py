@@ -9,7 +9,7 @@ try:
 except ImportError:
     raise ImportError("`pymongo` not installed. Please install it with `pip install pymongo`")
 
-from agno.memory_v2.db.memory import MemoryDb
+from agno.memory_v2.memory import MemoryDb
 from agno.memory_v2.db.schema import MemoryRow
 from agno.utils.log import log_debug, logger
 

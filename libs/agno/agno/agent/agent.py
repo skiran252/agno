@@ -29,7 +29,8 @@ from agno.exceptions import ModelProviderError, StopAgentRun
 from agno.knowledge.agent import AgentKnowledge
 from agno.media import Audio, AudioArtifact, AudioResponse, File, Image, ImageArtifact, Video, VideoArtifact
 from agno.memory.agent import AgentMemory, AgentRun
-from agno.memory_v2.memory import Memory, SessionSummary
+from agno.memory_v2.memory import Memory
+from agno.memory_v2.schema import SessionSummary, SessionSummary as SessionSummaryV2
 from agno.models.base import Model
 from agno.models.message import Citations, Message, MessageReferences
 from agno.models.response import ModelResponse, ModelResponseEvent
@@ -357,6 +358,10 @@ class Agent:
         self.memory = memory
         self.enable_agentic_memory = enable_agentic_memory
         self.create_user_memories = create_user_memories
+
+        # We default to creating user memories if agentic memory is enabled
+        if self.enable_agentic_memory:
+            self.create_user_memories = True
         self.create_session_summaries = create_session_summaries
 
         self.add_history_to_messages = add_history_to_messages
@@ -2182,7 +2187,7 @@ class Agent:
                     except Exception as e:
                         log_warning(f"Failed to load runs from memory: {e}")
                 if "memories" in session.memory:
-                    from agno.memory_v2.memory import UserMemory as UserMemoryV2
+                    from agno.memory_v2.schema import UserMemory as UserMemoryV2
 
                     try:
                         self.memory.memories = {
@@ -2194,7 +2199,6 @@ class Agent:
                     except Exception as e:
                         log_warning(f"Failed to load user memories: {e}")
                 if "summaries" in session.memory:
-                    from agno.memory_v2.memory import SessionSummary as SessionSummaryV2
 
                     try:
                         self.memory.summaries = {
@@ -3803,31 +3807,31 @@ class Agent:
     ###########################################################################
 
     def get_update_user_memory_function(self, user_id: Optional[str] = None, async_mode: bool = False) -> Callable:
-        def update_user_memory(message: str) -> str:
+        def update_user_memory(task: str) -> str:
+            """Use this function to update the Agent's memory. Describe the task in detail.
+
+            Args:
+                task: The task to update the memory with.
+
+            Returns:
+                str: A string indicating the status of the task.
+            """
+            self.memory = cast(Memory, self.memory)
+            response = self.memory.update_memory_task(task=task, user_id=user_id)
+            return response
+
+        async def aupdate_user_memory(task: str) -> str:
             """Use this function to update the user's memory.
 
             Args:
-                message: The message to update the user's memory with.
+                task: The task to update the memory with.
 
             Returns:
                 str: A string indicating the status of the update.
             """
             self.memory = cast(Memory, self.memory)
-            self.memory.create_user_memory(message=message, user_id=user_id)
-            return "Memory updated successfully"
-
-        async def aupdate_user_memory(message: str) -> str:
-            """Use this function to update the user's memory.
-
-            Args:
-                message: The message to update the user's memory with.
-
-            Returns:
-                str: A string indicating the status of the update.
-            """
-            self.memory = cast(Memory, self.memory)
-            await self.memory.acreate_user_memory(message=message, user_id=user_id)
-            return "Memory updated successfully"
+            response = await self.memory.aupdate_memory_task(task=task, user_id=user_id)
+            return response
 
         if async_mode:
             return aupdate_user_memory
