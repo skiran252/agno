@@ -3,10 +3,15 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
+<<<<<<< HEAD
 from agno.agent.agent import Agent
 from agno.memory_v2.manager import MemoryManager
 from agno.memory_v2.memory import Memory
 from agno.memory_v2.schema import UserMemory, SessionSummary
+=======
+from agno.memory.v2.memory import Memory
+from agno.memory.v2.schema import UserMemory, SessionSummary
+>>>>>>> eff6aa7b788aaac86ca0e0e077c629d8962b37b9
 from agno.models.message import Message
 from agno.models.openai.chat import OpenAIChat
 from agno.run.response import RunResponse

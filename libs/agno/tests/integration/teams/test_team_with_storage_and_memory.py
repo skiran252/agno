@@ -5,8 +5,8 @@ import uuid
 import pytest
 
 from agno.agent import Agent
-from agno.memory_v2.db.sqlite import SqliteMemoryDb
-from agno.memory_v2.memory import Memory
+from agno.memory.v2.db.sqlite import SqliteMemoryDb
+from agno.memory.v2.memory import Memory
 from agno.models.anthropic.claude import Claude
 from agno.models.openai.chat import OpenAIChat
 from agno.storage.sqlite import SqliteStorage

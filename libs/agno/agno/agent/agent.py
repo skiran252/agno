@@ -29,8 +29,7 @@ from agno.exceptions import ModelProviderError, StopAgentRun
 from agno.knowledge.agent import AgentKnowledge
 from agno.media import Audio, AudioArtifact, AudioResponse, File, Image, ImageArtifact, Video, VideoArtifact
 from agno.memory.agent import AgentMemory, AgentRun
-from agno.memory_v2.memory import Memory
-from agno.memory_v2.schema import SessionSummary, SessionSummary as SessionSummaryV2
+from agno.memory.v2.memory import Memory, SessionSummary
 from agno.models.base import Model
 from agno.models.message import Citations, Message, MessageReferences
 from agno.models.response import ModelResponse, ModelResponseEvent
@@ -358,6 +357,8 @@ class Agent:
         self.memory = memory
         self.enable_agentic_memory = enable_agentic_memory
         self.create_user_memories = create_user_memories
+        self.create_session_summaries = create_session_summaries
+
 
         # We default to creating user memories if agentic memory is enabled
         if self.enable_agentic_memory:
@@ -2188,7 +2189,7 @@ class Agent:
                     except Exception as e:
                         log_warning(f"Failed to load runs from memory: {e}")
                 if "memories" in session.memory:
-                    from agno.memory_v2.schema import UserMemory as UserMemoryV2
+                    from agno.memory.v2.memory import UserMemory as UserMemoryV2
 
                     try:
                         self.memory.memories = {
@@ -2200,6 +2201,7 @@ class Agent:
                     except Exception as e:
                         log_warning(f"Failed to load user memories: {e}")
                 if "summaries" in session.memory:
+                    from agno.memory.v2.memory import SessionSummary as SessionSummaryV2
 
                     try:
                         self.memory.summaries = {
@@ -3251,7 +3253,7 @@ class Agent:
         session_id = session_id or self.session_id
 
         # -*- Read from storage
-        self.read_from_storage(user_id=self.user_id, session_id=session_id)  # type: ignore
+        self.read_from_storage(user_id=self.user_id, session_id=session_id)
         # -*- Rename session
         self.session_name = session_name
         # -*- Save to storage
@@ -3839,7 +3841,7 @@ class Agent:
                 task: The task to update the memory. Be specific and describe the task in detail.
 
             Returns:
-                str: A string indicating the status of the update.
+                str: A string indicating the status of the task.
             """
             self.memory = cast(Memory, self.memory)
             response = await self.memory.aupdate_memory_task(task=task, user_id=user_id)
