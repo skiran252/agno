@@ -5,7 +5,7 @@ import pytest
 
 from agno.memory.v2 import MemoryManager
 from agno.memory.v2.memory import Memory
-from agno.memory.v2.schema import UserMemory, SessionSummary
+from agno.memory.v2.schema import SessionSummary, UserMemory
 from agno.models.message import Message
 from agno.models.openai.chat import OpenAIChat
 from agno.run.response import RunResponse
@@ -78,6 +78,7 @@ def test_initialization_with_model():
     assert memory.memory_manager is not None
     assert memory.memory_manager.model == model
 
+
 def test_set_model():
     model = OpenAIChat()
     memory = Memory(memory_manager=MemoryManager())
@@ -85,6 +86,7 @@ def test_set_model():
     assert memory.model == model
     assert memory.memory_manager is not None
     assert memory.memory_manager.model == model
+
 
 def test_initialization_with_memories(sample_user_memory):
     memories = {"user1": {"memory1": sample_user_memory}}

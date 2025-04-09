@@ -46,7 +46,6 @@ class MemoryManager:
     # Provide the system prompt for the manager as a string
     system_prompt: Optional[str] = None
 
-
     def add_tools_to_model(self, tools: List[Callable]) -> None:
         self.model = cast(Model, self.model)
         # Reset the tools and functions on the model
@@ -72,7 +71,6 @@ class MemoryManager:
         # Set functions on the model
         self.model.set_functions(functions=_functions_for_model)
 
-
     def update_model(self) -> None:
         self.model = cast(Model, self.model)
         self.model.reset_tools_and_functions()
@@ -94,7 +92,7 @@ class MemoryManager:
             }
         else:
             self.model.response_format = {"type": "json_object"}
-        
+
     def get_update_memories_system_message(
         self, messages: List[Message], existing_memories: Optional[List[Dict[str, Any]]] = None
     ) -> Message:
@@ -140,7 +138,6 @@ class MemoryManager:
 
         return Message(role="system", content="\n".join(system_prompt_lines))
 
-
     def get_memory_task_system_message(self, existing_memories: Optional[List[Dict[str, Any]]] = None) -> Message:
         # -*- Return a system message for the memory manager
         system_prompt_lines = [
@@ -153,8 +150,7 @@ class MemoryManager:
             "  - Important context about the user's current situation, challenges or goals\n"
             "  - What the user likes or dislikes, their opinions, beliefs, values, etc.\n"
             "  - Any other details that provide valuable insights into the user's personality, perspective or needs",
-            "You will also be provided with a list of existing memories. "
-            "You may:",
+            "You will also be provided with a list of existing memories. You may:",
             "  1. Add a new memory using the `add_memory` tool.",
             "  2. Update an existing memory using the `update_memory` tool.",
             "  3. Delete an existing memory using the `delete_memory` tool.",
@@ -170,7 +166,6 @@ class MemoryManager:
             system_prompt_lines.append("</existing_memories>")
 
         return Message(role="system", content="\n".join(system_prompt_lines))
-
 
     def create_or_update_memories(
         self,
@@ -299,7 +294,6 @@ class MemoryManager:
 
         return response.content
 
-
     async def arun_memory_task(
         self,
         task: str,
@@ -342,13 +336,16 @@ class MemoryManager:
                 str: A message indicating if the memory was added successfully or not.
             """
             from uuid import uuid4
+
             try:
                 last_updated = datetime.now()
                 db.upsert_memory(
                     MemoryRow(
                         id=str(uuid4()),
                         user_id=user_id,
-                        memory=UserMemory(memory=memory, topics=topics, last_updated=last_updated, input=task).to_dict(),
+                        memory=UserMemory(
+                            memory=memory, topics=topics, last_updated=last_updated, input=task
+                        ).to_dict(),
                         last_updated=last_updated,
                     )
                 )
@@ -372,7 +369,9 @@ class MemoryManager:
                     MemoryRow(
                         id=memory_id,
                         user_id=user_id,
-                        memory=UserMemory(memory_id=memory_id, memory=memory, topics=topics, last_updated=last_updated, input=task).to_dict(),
+                        memory=UserMemory(
+                            memory_id=memory_id, memory=memory, topics=topics, last_updated=last_updated, input=task
+                        ).to_dict(),
                         last_updated=last_updated,
                     )
                 )
@@ -409,4 +408,3 @@ class MemoryManager:
             delete_memory,
             clear_memory,
         ]
-

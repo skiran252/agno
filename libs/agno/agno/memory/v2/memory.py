@@ -10,8 +10,8 @@ from agno.media import AudioArtifact, ImageArtifact, VideoArtifact
 from agno.memory.v2.db.base import MemoryDb
 from agno.memory.v2.db.schema import MemoryRow
 from agno.memory.v2.manager import MemoryManager, MemoryUpdatesResponse
+from agno.memory.v2.schema import SessionSummary, UserMemory
 from agno.memory.v2.summarizer import SessionSummarizer
-from agno.memory.v2.schema import UserMemory, SessionSummary
 from agno.models.base import Model
 from agno.models.message import Message
 from agno.run.response import RunResponse
@@ -151,7 +151,7 @@ class Memory:
 
     def set_model(self, model: Model) -> None:
         self.model = deepcopy(model)
-        
+
         if self.memory_manager is None:
             self.memory_manager = MemoryManager(model=deepcopy(self.model))
         if self.memory_manager.model is None:
@@ -392,9 +392,15 @@ class Memory:
                 if len(messages) == 1:
                     input_string = messages[0].get_content_string()
                 else:
-                    input_string = f"[{', '.join([m.get_content_string() for m in messages if m.role == 'user' and m.content])}]"
+                    input_string = (
+                        f"[{', '.join([m.get_content_string() for m in messages if m.role == 'user' and m.content])}]"
+                    )
                 user_memory = UserMemory(
-                    memory_id=update.id, memory=update.memory, topics=update.topics, last_updated=datetime.now(), input=input_string
+                    memory_id=update.id,
+                    memory=update.memory,
+                    topics=update.topics,
+                    last_updated=datetime.now(),
+                    input=input_string,
                 )
                 memory_id = self.replace_user_memory(memory_id=update.id, memory=user_memory, user_id=user_id)
                 if memory_id is None:
@@ -409,9 +415,15 @@ class Memory:
                 if len(messages) == 1:
                     input_string = messages[0].get_content_string()
                 else:
-                    input_string = f"[{', '.join([m.get_content_string() for m in messages if m.role == 'user' and m.content])}]"
+                    input_string = (
+                        f"[{', '.join([m.get_content_string() for m in messages if m.role == 'user' and m.content])}]"
+                    )
                 user_memory = UserMemory(
-                    memory_id=memory_id, memory=update.memory, topics=update.topics, last_updated=datetime.now(), input=input_string
+                    memory_id=memory_id,
+                    memory=update.memory,
+                    topics=update.topics,
+                    last_updated=datetime.now(),
+                    input=input_string,
                 )
 
                 memory_id = self.add_user_memory(memory=user_memory, user_id=user_id)
@@ -455,13 +467,16 @@ class Memory:
         for update in memory_updates.updates:
             # We have an existing memory id, so we need to replace the memory
             if update.id is not None:
-
                 if len(messages) == 1:
                     input_string = messages[0].get_content_string()
                 else:
-                    input_string = f"[{', '.join([m.get_content_string() for m in messages if m.role == 'user' and m.content])}]"
+                    input_string = (
+                        f"[{', '.join([m.get_content_string() for m in messages if m.role == 'user' and m.content])}]"
+                    )
 
-                user_memory = UserMemory(memory=update.memory, topics=update.topics, last_updated=datetime.now(), input=input_string)
+                user_memory = UserMemory(
+                    memory=update.memory, topics=update.topics, last_updated=datetime.now(), input=input_string
+                )
                 memory_id = self.replace_user_memory(memory_id=update.id, memory=user_memory, user_id=user_id)
                 if memory_id is None:
                     continue
@@ -471,9 +486,13 @@ class Memory:
                 if len(messages) == 1:
                     input_string = messages[0].get_content_string()
                 else:
-                    input_string = f"[{', '.join([m.get_content_string() for m in messages if m.role == 'user' and m.content])}]"
+                    input_string = (
+                        f"[{', '.join([m.get_content_string() for m in messages if m.role == 'user' and m.content])}]"
+                    )
 
-                user_memory = UserMemory(memory=update.memory, topics=update.topics, last_updated=datetime.now(), input=input_string)
+                user_memory = UserMemory(
+                    memory=update.memory, topics=update.topics, last_updated=datetime.now(), input=input_string
+                )
                 memory_id = self.add_user_memory(memory=user_memory, user_id=user_id)
                 response_memories[memory_id] = user_memory
 

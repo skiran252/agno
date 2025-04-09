@@ -154,7 +154,7 @@ class Model(ABC):
     def set_functions(self, functions: Dict[str, Function]) -> None:
         if len(functions) > 0:
             self._functions = functions
-    
+
     def reset_tools_and_functions(self) -> None:
         self._tools = None
         self._functions = None

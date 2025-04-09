@@ -359,7 +359,6 @@ class Agent:
         self.create_user_memories = create_user_memories
         self.create_session_summaries = create_session_summaries
 
-
         # We default to creating user memories if agentic memory is enabled
         if self.enable_agentic_memory:
             self.create_user_memories = True
@@ -3831,7 +3830,7 @@ class Agent:
 
         async def amemory_task(task: str) -> str:
             """
-            Use this function to update the Agent's memory of a user. 
+            Use this function to update the Agent's memory of a user.
             Describe the task in detail and be specific.
             The task can include adding a memory, updating a memory, deleting a memory, or clearing all memories.
 

@@ -39,7 +39,11 @@ for i, m in enumerate(memories):
     print(f"{i}: {m.memory}")
 
 
-agent.print_response("Remove all existing memories of me. Completely clear the DB.", stream=True, user_id=john_doe_id)
+agent.print_response(
+    "Remove all existing memories of me. Completely clear the DB.",
+    stream=True,
+    user_id=john_doe_id,
+)
 
 memories = memory.get_user_memories(user_id=john_doe_id)
 
@@ -47,7 +51,9 @@ print("Memories about John Doe:")
 for i, m in enumerate(memories):
     print(f"{i}: {m.memory}")
 
-agent.print_response("My name is John Doe and I like to paint.", stream=True, user_id=john_doe_id)
+agent.print_response(
+    "My name is John Doe and I like to paint.", stream=True, user_id=john_doe_id
+)
 
 memories = memory.get_user_memories(user_id=john_doe_id)
 
@@ -63,5 +69,3 @@ memories = memory.get_user_memories(user_id=john_doe_id)
 print("Memories about John Doe:")
 for i, m in enumerate(memories):
     print(f"{i}: {m.memory}")
-
-

@@ -57,13 +57,12 @@ def test_add_user_memory_with_db(memory_with_db):
     assert memory_with_db.memories["test_user"][memory_id] == user_memory
 
     # Create a new Memory instance with the same database
-    new_memory = Memory(
-        model=memory_with_db.model, db=memory_with_db.db
-    )
+    new_memory = Memory(model=memory_with_db.model, db=memory_with_db.db)
 
     # Verify the memory was loaded from the database
     assert new_memory.get_user_memory("test_user", memory_id) is not None
     assert new_memory.get_user_memory("test_user", memory_id).memory == "The user's name is John Doe"
+
 
 def test_create_user_memory_with_db(memory_with_db):
     """Test creating user memories with database persistence."""
@@ -83,6 +82,7 @@ def test_create_user_memory_with_db(memory_with_db):
 
     assert memories[0].input == message
     assert "basketball" in memories[0].memory.lower()
+
 
 def test_create_user_memories_with_db(memory_with_db):
     """Test creating user memories with database persistence."""
@@ -105,9 +105,7 @@ def test_create_user_memories_with_db(memory_with_db):
     assert len(memories) > 0
 
     # Create a new Memory instance with the same database
-    new_memory = Memory(
-        model=memory_with_db.model, db=memory_with_db.db
-    )
+    new_memory = Memory(model=memory_with_db.model, db=memory_with_db.db)
 
     # Verify memories were loaded from the database
     new_memories = new_memory.get_user_memories("test_user")
@@ -133,9 +131,7 @@ async def test_acreate_user_memory_with_db(memory_with_db):
     assert len(memories) > 0
 
     # Create a new Memory instance with the same database
-    new_memory = Memory(
-        model=memory_with_db.model, db=memory_with_db.db
-    )
+    new_memory = Memory(model=memory_with_db.model, db=memory_with_db.db)
 
     # Verify memory was loaded from the database
     new_memories = new_memory.get_user_memories("test_user")
@@ -165,9 +161,7 @@ async def test_acreate_user_memories_with_db(memory_with_db):
     assert len(memories) > 0
 
     # Create a new Memory instance with the same database
-    new_memory = Memory(
-        model=memory_with_db.model, db=memory_with_db.db
-    )
+    new_memory = Memory(model=memory_with_db.model, db=memory_with_db.db)
 
     # Verify memories were loaded from the database
     new_memories = new_memory.get_user_memories("test_user")
@@ -293,9 +287,7 @@ def test_memory_operations_with_db(memory_with_db):
     assert memory_id not in memory_with_db.memories["test_user"]
 
     # Create a new Memory instance with the same database
-    new_memory = Memory(
-        model=memory_with_db.model, db=memory_with_db.db
-    )
+    new_memory = Memory(model=memory_with_db.model, db=memory_with_db.db)
 
     # Verify the memory is still deleted in the new instance
     assert "test_user" not in new_memory.memories or memory_id not in new_memory.memories["test_user"]
@@ -330,9 +322,7 @@ def test_summary_operations_with_db(memory_with_db):
     assert session_id not in memory_with_db.summaries[user_id]
 
     # Create a new Memory instance with the same database
-    new_memory = Memory(
-        model=memory_with_db.model, db=memory_with_db.db
-    )
+    new_memory = Memory(model=memory_with_db.model, db=memory_with_db.db)
 
     # Verify the summary is still deleted in the new instance
     assert "test_user" not in new_memory.summaries or session_id not in new_memory.summaries["test_user"]
@@ -370,9 +360,7 @@ def test_clear_memory_with_db(memory_with_db):
     assert memory_with_db.summaries == {}
 
     # Create a new Memory instance with the same database
-    new_memory = Memory(
-        model=memory_with_db.model, db=memory_with_db.db
-    )
+    new_memory = Memory(model=memory_with_db.model, db=memory_with_db.db)
 
     # Verify the memory is still cleared in the new instance
     assert new_memory.memories == {}
@@ -495,9 +483,13 @@ async def test_aupdate_memory_task_with_db(memory_with_db):
 
     # Verify memories were updated
     assert len(memories) > 0
-    assert any("occupation" in memory.memory.lower() and "software engineer" in memory.memory.lower() for memory in memories)
+    assert any(
+        "occupation" in memory.memory.lower() and "software engineer" in memory.memory.lower() for memory in memories
+    )
 
-    response = await memory_with_db.aupdate_memory_task(task="Delete any memories of the user's name", user_id="test_user")
+    response = await memory_with_db.aupdate_memory_task(
+        task="Delete any memories of the user's name", user_id="test_user"
+    )
 
     # Verify the task was processed
     assert response is not None
