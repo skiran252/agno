@@ -5,7 +5,7 @@ Every time you run this, the `Memory` object will be re-initialized from the DB.
 """
 
 from agno.agent.agent import Agent
-from agno.memory_v2.memory import Memory
+from agno.memory.v2.memory import Memory
 from agno.models.google.gemini import Gemini
 
 # No need to set the model, it gets set by the agent to the agent's model
