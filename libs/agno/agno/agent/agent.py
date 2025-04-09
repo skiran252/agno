@@ -484,6 +484,10 @@ class Agent:
         if telemetry_env is not None:
             self.telemetry = telemetry_env.lower() == "true"
 
+        if self.monitoring:
+            print("setting register_on_platform to True")
+            self.register_on_platform = True
+
     def initialize_agent(self) -> None:
         self.set_storage_mode()
         self.set_debug()
@@ -543,8 +547,8 @@ class Agent:
         self.run_id = str(uuid4())
         self.run_response = RunResponse(run_id=self.run_id, session_id=self.session_id, agent_id=self.agent_id)
 
-        if self.register_on_platform:
-            self._register_agent_on_platform()
+        
+        self._register_agent_on_platform()
 
         log_debug(f"Agent Run Start: {self.run_response.run_id}", center=True)
 
@@ -1081,13 +1085,12 @@ class Agent:
         self.run_response = RunResponse(run_id=self.run_id, session_id=self.session_id, agent_id=self.agent_id)
 
         # 1.4 Register the agent on the platform
-        if self.register_on_platform:
+ 
+        def _run_async_in_thread(coro):
+            asyncio.run(coro)
 
-            def _run_async_in_thread(coro):
-                asyncio.run(coro)
-
-            t = threading.Thread(target=_run_async_in_thread, args=(self._aregister_agent_on_platform(),), daemon=True)
-            t.start()
+        t = threading.Thread(target=_run_async_in_thread, args=(self._aregister_agent_on_platform(),), daemon=True)
+        t.start()
 
         log_debug(f"Async Agent Run Start: {self.run_response.run_id}", center=True, symbol="*")
 
@@ -3759,6 +3762,11 @@ class Agent:
         return run_data
 
     def _register_agent_on_platform(self) -> None:
+        print("registering agent on", self.run_id, self.agent_id, self.name)
+        self.set_monitoring()
+        if not self.register_on_platform:
+            return
+
         from agno.api.agent import AgentCreate, create_agent
 
         try:
@@ -3768,6 +3776,8 @@ class Agent:
             log_debug(f"Could not create Agent app: {e}")
 
     async def _aregister_agent_on_platform(self) -> None:
+        print("Aregistering agent on", self.run_id, self.agent_id, self.name)
+        self.set_monitoring()
         if not self.register_on_platform:
             return
 

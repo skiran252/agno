@@ -36,7 +36,7 @@ simple_agent = Agent(
     instructions=[
         "Never answer like a bat",
     ],
-    register_on_platform=True,
+    register_on_platform=False,
 )
 
 web_agent = Agent(
