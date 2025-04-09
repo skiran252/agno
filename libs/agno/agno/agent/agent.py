@@ -2022,6 +2022,10 @@ class Agent:
             if isinstance(self.memory, AgentMemory):
                 self.memory = cast(AgentMemory, self.memory)
                 memory_dict = self.memory.to_dict()
+                # We only persist the runs for the current session ID (not all runs in memory)
+                memory_dict["runs"] = [
+                    agent_run.to_dict() for agent_run in self.memory.runs if agent_run.response.session_id == session_id
+                ]
             else:
                 self.memory = cast(Memory, self.memory)
                 # We fake the structure on storage, to maintain the interface with the legacy implementation
@@ -2220,6 +2224,9 @@ class Agent:
             if self.agent_session is not None:
                 # Load the agent session
                 self.load_agent_session(session=self.agent_session)
+            else:
+                # New session, just reset the state
+                self.session_name = None
             self.load_user_memories(user_id=user_id)
         return self.agent_session
 

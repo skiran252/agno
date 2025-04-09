@@ -5478,6 +5478,9 @@ class Team:
             if self.team_session is not None:
                 # Load the team session
                 self.load_team_session(session=self.team_session)
+            else:
+                # New session, just reset the state
+                self.session_name = None
             self.load_user_memories(user_id=user_id)
         return self.team_session
 
