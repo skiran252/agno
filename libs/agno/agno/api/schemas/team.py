@@ -19,10 +19,10 @@ class TeamRunCreate(BaseModel):
     run_data: Optional[Dict[str, Any]] = None
     team_data: Optional[Dict[str, Any]] = None
 
+
 class TeamCreate(BaseModel):
     """Data sent to API to create aTeam"""
 
     team_id: str
     name: Optional[str] = None
     config: Dict[str, Any]
-

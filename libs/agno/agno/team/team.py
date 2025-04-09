@@ -5217,7 +5217,6 @@ class Team:
         )
 
     def _log_team_run(self) -> None:
-
         if not self.telemetry and not self.monitoring:
             return
 
@@ -5375,6 +5374,7 @@ class Team:
 
     def _register_team_on_platform(self) -> None:
         from agno.api.team import TeamCreate, create_team
+
         print("Registering Team on platform")
         try:
             create_team(
@@ -5389,7 +5389,6 @@ class Team:
             print(f"Could not create team on platform: {e}")
 
     async def _aregister_team_on_platform(self) -> None:
-
         from agno.api.team import TeamCreate, acreate_team
 
         try:

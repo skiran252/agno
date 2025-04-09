@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import threading
 from collections import ChainMap, defaultdict, deque
 from dataclasses import asdict, dataclass
 from os import getenv
@@ -21,9 +23,9 @@ from typing import (
     overload,
 )
 from uuid import uuid4
-import asyncio
+
 from pydantic import BaseModel
-import threading
+
 from agno.agent.metrics import SessionMetrics
 from agno.exceptions import ModelProviderError, StopAgentRun
 from agno.knowledge.agent import AgentKnowledge
@@ -859,6 +861,7 @@ class Agent:
         # Log Agent Run
         def log_and_register():
             self._log_agent_run()
+
         # Start the log_and_register function in a separate thread
         thread = threading.Thread(target=log_and_register)
         thread.start()
@@ -1079,8 +1082,10 @@ class Agent:
 
         # 1.4 Register the agent on the platform
         if self.register_on_platform:
+
             def _run_async_in_thread(coro):
                 asyncio.run(coro)
+
             t = threading.Thread(target=_run_async_in_thread, args=(self._aregister_agent_on_platform(),), daemon=True)
             t.start()
 
@@ -3753,20 +3758,12 @@ class Agent:
 
         return run_data
 
-
     def _register_agent_on_platform(self) -> None:
-
         from agno.api.agent import AgentCreate, create_agent
 
         try:
             print("registering agent on", self.run_id, self.agent_id, self.name)
-            create_agent(
-                app=AgentCreate(
-                    name=self.name,
-                    agent_id=self.agent_id,
-                    config=self.to_platform_dict()
-                )
-            )
+            create_agent(app=AgentCreate(name=self.name, agent_id=self.agent_id, config=self.to_platform_dict()))
         except Exception as e:
             log_debug(f"Could not create Agent app: {e}")
 
@@ -3779,11 +3776,7 @@ class Agent:
         try:
             print("async creating agent on", self.run_id, self.agent_id, self.name)
             await acreate_agent(
-                agent=AgentCreate(
-                    name=self.name,
-                    agent_id=self.agent_id,
-                    config=self.to_platform_dict()
-                )
+                agent=AgentCreate(name=self.name, agent_id=self.agent_id, config=self.to_platform_dict())
             )
         except Exception as e:
             log_debug(f"Could not create Agent app: {e}")
@@ -4559,22 +4552,14 @@ class Agent:
             self.print_response(message=message, stream=stream, markdown=markdown, **kwargs)
 
     def to_platform_dict(self) -> Dict[str, Any]:
-
-
         tools = []
         if self.tools is not None:
             for tool in self.tools:
                 functions = []
                 for function in tool.functions.keys():
                     print(function)
-                    functions.append({
-                        "name": function,
-                        "parameters": tool.functions[function].to_dict()
-                    })
-                tools.append({
-                    "name": tool.name,
-                    "functions": functions
-                })
+                    functions.append({"name": function, "parameters": tool.functions[function].to_dict()})
+                tools.append({"name": tool.name, "functions": functions})
 
         model = None
         if self.model is not None:

@@ -4,6 +4,8 @@ from datetime import datetime
 from textwrap import dedent
 
 from agno.agent import Agent
+from agno.embedder.openai import OpenAIEmbedder
+from agno.knowledge.pdf_url import PDFUrlKnowledgeBase
 from agno.models.openai import OpenAIChat
 from agno.playground import Playground, serve_playground_app
 from agno.storage.sqlite import SqliteStorage
@@ -12,10 +14,7 @@ from agno.tools.duckduckgo import DuckDuckGoTools
 from agno.tools.exa import ExaTools
 from agno.tools.yfinance import YFinanceTools
 from agno.tools.youtube import YouTubeTools
-from agno.knowledge.pdf_url import PDFUrlKnowledgeBase
 from agno.vectordb.lancedb import LanceDb, SearchType
-from agno.embedder.openai import OpenAIEmbedder
-
 
 agent_storage_file: str = "tmp/agents.db"
 image_agent_storage_file: str = "tmp/image_agent.db"
@@ -60,7 +59,7 @@ web_agent = Agent(
     markdown=True,
     register_on_platform=True,
     debug_mode=True,
-     knowledge=PDFUrlKnowledgeBase(
+    knowledge=PDFUrlKnowledgeBase(
         urls=["https://agno-public.s3.amazonaws.com/recipes/ThaiRecipes.pdf"],
         vector_db=LanceDb(
             uri="tmp/lancedb",
