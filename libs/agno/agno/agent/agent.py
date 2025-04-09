@@ -1891,7 +1891,6 @@ class Agent:
                 model.set_tools(tools=self._tools_for_model)
                 # Set functions on the model
                 model.set_functions(functions=self._functions_for_model)
-        print("TOOLS", self.model._tools)
 
     def update_model(self, session_id: str, async_mode: bool = False, user_id: Optional[str] = None) -> None:
         # Use the default Model (OpenAIChat) if no model is provided
@@ -3827,7 +3826,6 @@ class Agent:
                 str: A string indicating the status of the task.
             """
             self.memory = cast(Memory, self.memory)
-            print("UPDATE TASK", task)
             response = self.memory.update_memory_task(task=task, user_id=user_id)
             return response
 

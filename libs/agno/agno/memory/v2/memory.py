@@ -1,7 +1,8 @@
+from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import datetime
 from os import getenv
-from typing import Any, Dict, List, Literal, Optional, Union, cast
+from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field
 
@@ -115,10 +116,10 @@ class Memory:
         # We are making memories
         if self.model is not None:
             if self.memory_manager is None:
-                self.memory_manager = MemoryManager(model=self.model)
+                self.memory_manager = MemoryManager(model=deepcopy(self.model))
             # Set the model on the memory manager if it is not set
             if self.memory_manager.model is None:
-                self.memory_manager.model = self.model
+                self.memory_manager.model = deepcopy(self.model)
 
         if self.memory_manager is not None:
             if self.use_json_mode is not None:
@@ -127,10 +128,10 @@ class Memory:
         # We are making session summaries
         if self.model is not None:
             if self.summary_manager is None:
-                self.summary_manager = SessionSummarizer(model=self.model)
+                self.summary_manager = SessionSummarizer(model=deepcopy(self.model))
             # Set the model on the summary_manager if it is not set
             elif self.summary_manager.model is None:
-                self.summary_manager.model = self.model
+                self.summary_manager.model = deepcopy(self.model)
 
         if self.summary_manager is not None:
             if self.use_json_mode is not None:
@@ -149,16 +150,16 @@ class Memory:
             set_log_level_to_info()
 
     def set_model(self, model: Model) -> None:
-        self.model = model
+        self.model = deepcopy(model)
         
         if self.memory_manager is None:
-            self.memory_manager = MemoryManager(model=self.model)
+            self.memory_manager = MemoryManager(model=deepcopy(self.model))
         if self.memory_manager.model is None:
-            self.memory_manager.model = self.model
+            self.memory_manager.model = deepcopy(self.model)
         if self.summary_manager is None:
-            self.summary_manager = SessionSummarizer(model=self.model)
+            self.summary_manager = SessionSummarizer(model=deepcopy(self.model))
         if self.summary_manager.model is None:
-            self.summary_manager.model = self.model
+            self.summary_manager.model = deepcopy(self.model)
 
     def get_model(self) -> Model:
         if self.model is None:

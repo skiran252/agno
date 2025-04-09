@@ -48,11 +48,9 @@ class MemoryManager:
 
 
     def add_tools_to_model(self, tools: List[Callable]) -> None:
-
         self.model = cast(Model, self.model)
         # Reset the tools and functions on the model
-        self.model.set_tools(tools=[])
-        self.model.set_functions(functions={})
+        self.model.reset_tools_and_functions()
 
         _tools_for_model = []
         _functions_for_model = {}
@@ -62,6 +60,7 @@ class MemoryManager:
                 function_name = tool.__name__
                 if function_name not in _functions_for_model:
                     func = Function.from_callable(tool, strict=True)  # type: ignore
+                    func.strict = True
                     _functions_for_model[func.name] = func
                     _tools_for_model.append({"type": "function", "function": func.to_dict()})
                     log_debug(f"Added function {func.name}")
@@ -76,10 +75,7 @@ class MemoryManager:
 
     def update_model(self) -> None:
         self.model = cast(Model, self.model)
-        # Reset the tools and functions on the model
-        self.model.set_tools(tools=[])
-        self.model.set_functions(functions={})
-
+        self.model.reset_tools_and_functions()
 
         if self.use_json_mode is not None and self.use_json_mode is True:
             self.model.response_format = {"type": "json_object"}
@@ -98,7 +94,7 @@ class MemoryManager:
             }
         else:
             self.model.response_format = {"type": "json_object"}
-
+        
     def get_update_memories_system_message(
         self, messages: List[Message], existing_memories: Optional[List[Dict[str, Any]]] = None
     ) -> Message:

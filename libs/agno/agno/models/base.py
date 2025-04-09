@@ -154,6 +154,10 @@ class Model(ABC):
     def set_functions(self, functions: Dict[str, Function]) -> None:
         if len(functions) > 0:
             self._functions = functions
+    
+    def reset_tools_and_functions(self) -> None:
+        self._tools = None
+        self._functions = None
 
     def response(self, messages: List[Message]) -> ModelResponse:
         """
@@ -1151,7 +1155,7 @@ class Model(ABC):
 
         # Deep copy all attributes
         for k, v in self.__dict__.items():
-            if k in {"response_format", "tools", "_functions", "_function_call_stack"}:
+            if k in {"response_format", "_tools", "_functions", "_function_call_stack"}:
                 continue
             setattr(new_model, k, deepcopy(v, memo))
 
