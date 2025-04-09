@@ -104,12 +104,7 @@ class Memory:
         self.debug_mode = debug_mode
 
         self.model = model
-
-        self.model = model
         self.use_json_mode = use_json_mode
-
-        if self.model is None:
-            self.model = self.get_model()
 
         self.memory_manager = memory_manager
 
@@ -120,24 +115,26 @@ class Memory:
         # We are making memories
         if self.model is not None:
             if self.memory_manager is None:
-                self.memory_manager = MemoryManager(model=self.model, use_json_mode=self.use_json_mode)
+                self.memory_manager = MemoryManager(model=self.model)
             # Set the model on the memory manager if it is not set
             if self.memory_manager.model is None:
                 self.memory_manager.model = self.model
 
-        if self.use_json_mode is not None:
-            self.memory_manager.use_json_mode = self.use_json_mode
+        if self.memory_manager is not None:
+            if self.use_json_mode is not None:
+                self.memory_manager.use_json_mode = self.use_json_mode
 
         # We are making session summaries
         if self.model is not None:
             if self.summary_manager is None:
-                self.summary_manager = SessionSummarizer(model=self.model, use_json_mode=self.use_json_mode)
+                self.summary_manager = SessionSummarizer(model=self.model)
             # Set the model on the summary_manager if it is not set
             elif self.summary_manager.model is None:
                 self.summary_manager.model = self.model
 
-        if self.use_json_mode is not None:
-            self.summary_manager.use_json_mode = self.use_json_mode
+        if self.summary_manager is not None:
+            if self.use_json_mode is not None:
+                self.summary_manager.use_json_mode = self.use_json_mode
 
         # Initialize the memory and summary databases
         if self.db:
@@ -150,6 +147,18 @@ class Memory:
             set_log_level_to_debug()
         else:
             set_log_level_to_info()
+
+    def set_model(self, model: Model) -> None:
+        self.model = model
+        
+        if self.memory_manager is None:
+            self.memory_manager = MemoryManager(model=self.model)
+        if self.memory_manager.model is None:
+            self.memory_manager.model = self.model
+        if self.summary_manager is None:
+            self.summary_manager = SessionSummarizer(model=self.model)
+        if self.summary_manager.model is None:
+            self.summary_manager.model = self.model
 
     def get_model(self) -> Model:
         if self.model is None:
@@ -668,8 +677,6 @@ class Memory:
         if not self.memories:
             return []
 
-        self.model = cast(Model, self.model)
-
         if user_id is None:
             user_id = "default"
 
@@ -692,13 +699,13 @@ class Memory:
             return self._get_last_n_memories(user_id=user_id, limit=limit)
 
     def _update_model_for_semantic_search(self) -> None:
-        self.model = cast(Model, self.model)
-        if self.model.supports_native_structured_outputs:
-            self.model.response_format = MemorySearchResponse
-            self.model.structured_outputs = True
+        model = self.get_model()
+        if model.supports_native_structured_outputs:
+            model.response_format = MemorySearchResponse
+            model.structured_outputs = True
 
-        elif self.model.supports_json_schema_outputs:
-            self.model.response_format = {
+        elif model.supports_json_schema_outputs:
+            model.response_format = {
                 "type": "json_schema",
                 "json_schema": {
                     "name": MemorySearchResponse.__name__,
@@ -706,16 +713,16 @@ class Memory:
                 },
             }
         else:
-            self.model.response_format = {"type": "json_object"}
+            model.response_format = {"type": "json_object"}
 
     def _search_user_memories_semantic(self, user_id: str, query: str, limit: Optional[int] = None) -> List[UserMemory]:
         """Search through user memories using semantic search."""
         if not self.memories:
             return []
 
-        self.model = cast(Model, self.model)
+        model = self.get_model()
 
-        self._update_model_for_semantic_search()
+        self._update_model_for_semantic_search(model)
 
         log_debug("Searching for memories", center=True)
 
@@ -732,7 +739,7 @@ class Memory:
         system_message_str += "</user_memories>\n"
         system_message_str += "Only return the IDs of the memories that are most semantically similar to the query."
 
-        if self.model.response_format == {"type": "json_object"}:
+        if model.response_format == {"type": "json_object"}:
             system_message_str += "\n" + get_json_output_prompt(MemorySearchResponse)  # type: ignore
 
         messages_for_model = [
@@ -744,13 +751,13 @@ class Memory:
         ]
 
         # Generate a response from the Model (includes running function calls)
-        response = self.model.response(messages=messages_for_model)
+        response = model.response(messages=messages_for_model)
         log_debug("Search for memories complete", center=True)
 
         memory_search: Optional[MemorySearchResponse] = None
         # If the model natively supports structured outputs, the parsed value is already in the structured format
         if (
-            self.model.supports_native_structured_outputs
+            model.supports_native_structured_outputs
             and response.parsed is not None
             and isinstance(response.parsed, MemorySearchResponse)
         ):

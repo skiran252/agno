@@ -3,9 +3,12 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
+from agno.agent.agent import Agent
+from agno.memory_v2.manager import MemoryManager
 from agno.memory_v2.memory import Memory
 from agno.memory_v2.schema import UserMemory, SessionSummary
 from agno.models.message import Message
+from agno.models.openai.chat import OpenAIChat
 from agno.run.response import RunResponse
 
 
@@ -66,13 +69,23 @@ def test_default_initialization():
     assert memory.memories == {}
     assert memory.summaries == {}
     assert memory.runs == {}
-    assert memory.model is not None
+    assert memory.model is None
 
 
-def test_initialization_with_model(mock_model):
-    memory = Memory(model=mock_model)
-    assert memory.model == mock_model
-
+def test_initialization_with_model():
+    model = OpenAIChat()
+    memory = Memory(model=model)
+    assert memory.model == model
+    assert memory.memory_manager is not None
+    assert memory.memory_manager.model == model
+    
+def test_set_model():
+    model = OpenAIChat()
+    memory = Memory(memory_manager=MemoryManager())
+    memory.set_model(model)
+    assert memory.model == model
+    assert memory.memory_manager is not None
+    assert memory.memory_manager.model == model
 
 def test_initialization_with_memories(sample_user_memory):
     memories = {"user1": {"memory1": sample_user_memory}}

@@ -7,7 +7,7 @@ Every time you run this, the `Memory` object will be re-initialized from the DB.
 from agno.agent.agent import Agent
 from agno.memory_v2.db.sqlite import SqliteMemoryDb
 from agno.memory_v2.memory import Memory
-from agno.models.google.gemini import Gemini
+from agno.models.openai.chat import OpenAIChat
 
 memory_db = SqliteMemoryDb(table_name="memory", db_file="tmp/memory.db")
 
@@ -20,7 +20,7 @@ memory.clear()
 john_doe_id = "john_doe@example.com"
 
 agent = Agent(
-    model=Gemini(id="gemini-2.0-flash-exp"),
+    model=OpenAIChat(id="gpt-4o"),
     memory=memory,
     enable_agentic_memory=True,
 )
@@ -34,17 +34,34 @@ agent.print_response(
 agent.print_response("What are my hobbies?", stream=True, user_id=john_doe_id)
 
 memories = memory.get_user_memories(user_id=john_doe_id)
-print("John Doe's memories:")
+print("Memories about John Doe:")
 for i, m in enumerate(memories):
     print(f"{i}: {m.memory}")
 
 
-agent.print_response("Remove all existing memories of me.", stream=True, user_id=john_doe_id)
+agent.print_response("Remove all existing memories of me. Completely clear the DB.", stream=True, user_id=john_doe_id)
 
 memories = memory.get_user_memories(user_id=john_doe_id)
-print("John Doe's memory count:", len(memories))
+
+print("Memories about John Doe:")
+for i, m in enumerate(memories):
+    print(f"{i}: {m.memory}")
 
 agent.print_response("My name is Salvador Dali and I like to paint.", stream=True, user_id=john_doe_id)
 
 memories = memory.get_user_memories(user_id=john_doe_id)
-print("John Doe's memory count:", len(memories))
+
+print("Memories about John Doe:")
+for i, m in enumerate(memories):
+    print(f"{i}: {m.memory}")
+
+
+agent.print_response("Remove any memory of my name.", stream=True, user_id=john_doe_id)
+
+memories = memory.get_user_memories(user_id=john_doe_id)
+
+print("Memories about John Doe:")
+for i, m in enumerate(memories):
+    print(f"{i}: {m.memory}")
+
+

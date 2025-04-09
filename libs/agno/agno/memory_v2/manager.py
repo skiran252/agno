@@ -61,7 +61,7 @@ class MemoryManager:
             try:
                 function_name = tool.__name__
                 if function_name not in _functions_for_model:
-                    func = Function.from_callable(tool)  # type: ignore
+                    func = Function.from_callable(tool, strict=True)  # type: ignore
                     _functions_for_model[func.name] = func
                     _tools_for_model.append({"type": "function", "function": func.to_dict()})
                     log_debug(f"Added function {func.name}")

@@ -488,7 +488,7 @@ class Team:
         # Default to the team's model if no model is provided
         if isinstance(self.memory, Memory):
             if self.memory.model is None:
-                self.memory.model = self.model
+                self.memory.set_model(self.model)
 
         # Read existing session from storage
         if self.context is not None:
@@ -1162,7 +1162,7 @@ class Team:
         # Default to the team's model if no model is provided
         if isinstance(self.memory, Memory):
             if self.memory.model is None:
-                self.memory.model = self.model
+                self.memory.set_model(self.model)
 
         # Read existing session from storage
         if self.context is not None:

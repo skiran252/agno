@@ -508,7 +508,7 @@ class Agent:
         # Default to the agent's model if no model is provided
         if isinstance(self.memory, Memory):
             if self.memory.model is None:
-                self.memory.model = self.model
+                self.memory.set_model(self.model)
 
         if self._formatter is None:
             self._formatter = SafeFormatter()
@@ -1788,7 +1788,7 @@ class Agent:
         if isinstance(self.memory, AgentMemory) and self.memory.create_user_memories:
             agent_tools.append(self.update_memory)
         elif isinstance(self.memory, Memory) and self.enable_agentic_memory:
-            agent_tools.append(self.get_update_user_memory_function(user_id=user_id, async_mode=async_mode))
+            agent_tools.append(self.get_memory_task_function(user_id=user_id, async_mode=async_mode))
 
         # Add tools for accessing knowledge
         if self.knowledge is not None or self.retriever is not None:
@@ -1890,6 +1890,7 @@ class Agent:
                 model.set_tools(tools=self._tools_for_model)
                 # Set functions on the model
                 model.set_functions(functions=self._functions_for_model)
+        print("TOOLS", self.model._tools)
 
     def update_model(self, session_id: str, async_mode: bool = False, user_id: Optional[str] = None) -> None:
         # Use the default Model (OpenAIChat) if no model is provided
@@ -2538,8 +2539,12 @@ class Agent:
 
                 if self.enable_agentic_memory:
                     system_message_content += (
-                        "You can add new memories using the `update_memory` tool.\n"
-                        "If you use the `update_memory` tool, remember to pass on the response to the user.\n\n"
+                        "You have access to the `memory_task` tool.\n"
+                        "You can use the `memory_task` tool to add new memories, update existing memories, delete memories, or clear all memories.\n"
+                        "Memories should include details that could personalize ongoing interactions with the user.\n"
+                        "Use this tool to add new memories or update existing memories that you identify in the conversation.\n"
+                        "Use this tool if the user asks to update their memory, delete a memory, or clear all memories.\n"
+                        "If you use the `memory_task` tool, remember to pass on the response to the user.\n\n"
                     )
 
             # 3.3.12 Then add a summary of the interaction to the system prompt
@@ -3806,25 +3811,32 @@ class Agent:
     # Default Tools
     ###########################################################################
 
-    def get_update_user_memory_function(self, user_id: Optional[str] = None, async_mode: bool = False) -> Callable:
-        def update_user_memory(task: str) -> str:
-            """Use this function to update the Agent's memory. Describe the task in detail.
+    def get_memory_task_function(self, user_id: Optional[str] = None, async_mode: bool = False) -> Callable:
+        def memory_task(task: str) -> str:
+            """
+            Use this function to submit a task to modify the Agent's memory.
+            Describe the task in detail and be specific.
+            The task can include adding a memory, updating a memory, deleting a memory, or clearing all memories.
 
             Args:
-                task: The task to update the memory with.
+                task: The task to update the memory. Be specific and describe the task in detail.
 
             Returns:
                 str: A string indicating the status of the task.
             """
             self.memory = cast(Memory, self.memory)
+            print("UPDATE TASK", task)
             response = self.memory.update_memory_task(task=task, user_id=user_id)
             return response
 
-        async def aupdate_user_memory(task: str) -> str:
-            """Use this function to update the user's memory.
+        async def amemory_task(task: str) -> str:
+            """
+            Use this function to update the Agent's memory of a user. 
+            Describe the task in detail and be specific.
+            The task can include adding a memory, updating a memory, deleting a memory, or clearing all memories.
 
             Args:
-                task: The task to update the memory with.
+                task: The task to update the memory. Be specific and describe the task in detail.
 
             Returns:
                 str: A string indicating the status of the update.
@@ -3834,9 +3846,9 @@ class Agent:
             return response
 
         if async_mode:
-            return aupdate_user_memory
+            return amemory_task
         else:
-            return update_user_memory
+            return memory_task
 
     def get_chat_history_function(self, session_id: str) -> Callable:
         def get_chat_history(num_chats: Optional[int] = None) -> str:
