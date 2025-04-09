@@ -359,11 +359,6 @@ class Agent:
         self.create_user_memories = create_user_memories
         self.create_session_summaries = create_session_summaries
 
-        # We default to creating user memories if agentic memory is enabled
-        if self.enable_agentic_memory:
-            self.create_user_memories = True
-        self.create_session_summaries = create_session_summaries
-
         self.add_history_to_messages = add_history_to_messages
         self.num_history_responses = num_history_responses
         self.num_history_runs = num_history_runs
@@ -1788,7 +1783,7 @@ class Agent:
         if isinstance(self.memory, AgentMemory) and self.memory.create_user_memories:
             agent_tools.append(self.update_memory)
         elif isinstance(self.memory, Memory) and self.enable_agentic_memory:
-            agent_tools.append(self.get_memory_task_function(user_id=user_id, async_mode=async_mode))
+            agent_tools.append(self.get_update_user_memory_function(user_id=user_id, async_mode=async_mode))
 
         # Add tools for accessing knowledge
         if self.knowledge is not None or self.retriever is not None:
@@ -2539,12 +2534,12 @@ class Agent:
 
                 if self.enable_agentic_memory:
                     system_message_content += (
-                        "You have access to the `memory_task` tool.\n"
-                        "You can use the `memory_task` tool to add new memories, update existing memories, delete memories, or clear all memories.\n"
+                        "You have access to the `update_user_memory` tool.\n"
+                        "You can use the `update_user_memory` tool to add new memories, update existing memories, delete memories, or clear all memories.\n"
                         "Memories should include details that could personalize ongoing interactions with the user.\n"
                         "Use this tool to add new memories or update existing memories that you identify in the conversation.\n"
                         "Use this tool if the user asks to update their memory, delete a memory, or clear all memories.\n"
-                        "If you use the `memory_task` tool, remember to pass on the response to the user.\n\n"
+                        "If you use the `update_user_memory` tool, remember to pass on the response to the user.\n\n"
                     )
 
             # 3.3.12 Then add a summary of the interaction to the system prompt
@@ -3811,8 +3806,8 @@ class Agent:
     # Default Tools
     ###########################################################################
 
-    def get_memory_task_function(self, user_id: Optional[str] = None, async_mode: bool = False) -> Callable:
-        def memory_task(task: str) -> str:
+    def get_update_user_memory_function(self, user_id: Optional[str] = None, async_mode: bool = False) -> Callable:
+        def update_user_memory(task: str) -> str:
             """
             Use this function to submit a task to modify the Agent's memory.
             Describe the task in detail and be specific.
@@ -3828,7 +3823,7 @@ class Agent:
             response = self.memory.update_memory_task(task=task, user_id=user_id)
             return response
 
-        async def amemory_task(task: str) -> str:
+        async def aupdate_user_memory(task: str) -> str:
             """
             Use this function to update the Agent's memory of a user.
             Describe the task in detail and be specific.
@@ -3845,9 +3840,9 @@ class Agent:
             return response
 
         if async_mode:
-            return amemory_task
+            return aupdate_user_memory
         else:
-            return memory_task
+            return update_user_memory
 
     def get_chat_history_function(self, session_id: str) -> Callable:
         def get_chat_history(num_chats: Optional[int] = None) -> str:
