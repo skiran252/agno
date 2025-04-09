@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from agno.media import AudioArtifact, ImageArtifact, VideoArtifact
 from agno.memory.v2.db.base import MemoryDb
 from agno.memory.v2.db.schema import MemoryRow
-from agno.memory.v2.manager import MemoryManager, MemoryUpdatesResponse
+from agno.memory.v2.manager import MemoryManager
 from agno.memory.v2.schema import SessionSummary, UserMemory
 from agno.memory.v2.summarizer import SessionSummarizer
 from agno.models.base import Model
@@ -60,8 +60,6 @@ class TeamContext:
 class Memory:
     # Model used for memories and summaries
     model: Optional[Model] = None
-    # When using internal response models, this will force JSON response mode from models that aren't that strong at structured outputs.
-    use_json_mode: Optional[bool] = None
 
     # Memories per memory ID per user
     memories: Optional[Dict[str, Dict[str, UserMemory]]] = None
@@ -87,7 +85,6 @@ class Memory:
     def __init__(
         self,
         model: Optional[Model] = None,
-        use_json_mode: Optional[bool] = None,
         memory_manager: Optional[MemoryManager] = None,
         summarizer: Optional[SessionSummarizer] = None,
         db: Optional[MemoryDb] = None,
@@ -105,7 +102,6 @@ class Memory:
         self.debug_mode = debug_mode
 
         self.model = model
-        self.use_json_mode = use_json_mode
 
         self.memory_manager = memory_manager
 
@@ -121,10 +117,6 @@ class Memory:
             if self.memory_manager.model is None:
                 self.memory_manager.model = deepcopy(self.model)
 
-        if self.memory_manager is not None:
-            if self.use_json_mode is not None:
-                self.memory_manager.use_json_mode = self.use_json_mode
-
         # We are making session summaries
         if self.model is not None:
             if self.summary_manager is None:
@@ -132,10 +124,6 @@ class Memory:
             # Set the model on the summary_manager if it is not set
             elif self.summary_manager.model is None:
                 self.summary_manager.model = deepcopy(self.model)
-
-        if self.summary_manager is not None:
-            if self.use_json_mode is not None:
-                self.summary_manager.use_json_mode = self.use_json_mode
 
         # Initialize the memory and summary databases
         if self.db:
@@ -362,17 +350,21 @@ class Memory:
 
         return session_summary
 
-    def create_user_memory(self, message: str, user_id: Optional[str] = None) -> Dict[str, UserMemory]:
+    def create_user_memory(self, message: str, user_id: Optional[str] = None) -> str:
         """Creates a memory from a message and adds it to the memory db."""
         return self.create_user_memories(messages=[Message(role="user", content=message)], user_id=user_id)
 
-    def create_user_memories(self, messages: List[Message], user_id: Optional[str] = None) -> Dict[str, UserMemory]:
+    def create_user_memories(self, messages: List[Message], user_id: Optional[str] = None) -> str:
         """Creates memories from multiple messages and adds them to the memory db."""
         if not messages or not isinstance(messages, list):
             raise ValueError("Invalid messages list")
 
         if not self.memory_manager:
             raise ValueError("Memory manager not initialized")
+        
+        if self.db is None:
+            log_warning("MemoryDb not provided.")
+            return "Please provide a db to store memories"
 
         if user_id is None:
             user_id = "default"
@@ -381,125 +373,49 @@ class Memory:
         existing_memories = [
             {"memory_id": memory_id, "memory": memory.memory} for memory_id, memory in existing_memories.items()
         ]
-        memory_updates: MemoryUpdatesResponse = self.memory_manager.create_or_update_memories(  # type: ignore
-            messages=messages, existing_memories=existing_memories
+        response = self.memory_manager.create_or_update_memories(  # type: ignore
+            messages=messages, existing_memories=existing_memories, user_id=user_id, db=self.db
         )
 
-        response_memories = {}
-        for update in memory_updates.updates:
-            # We have an existing memory id, so we need to replace the memory
-            if update.id is not None:
-                if len(messages) == 1:
-                    input_string = messages[0].get_content_string()
-                else:
-                    input_string = (
-                        f"[{', '.join([m.get_content_string() for m in messages if m.role == 'user' and m.content])}]"
-                    )
-                user_memory = UserMemory(
-                    memory_id=update.id,
-                    memory=update.memory,
-                    topics=update.topics,
-                    last_updated=datetime.now(),
-                    input=input_string,
-                )
-                memory_id = self.replace_user_memory(memory_id=update.id, memory=user_memory, user_id=user_id)
-                if memory_id is None:
-                    continue
-                response_memories[memory_id] = user_memory
-            # We don't have an existing memory id, so we need to add a new memory
-            else:
-                from uuid import uuid4
+        # We refresh from the DB
+        self.initialize()
 
-                memory_id = str(uuid4())
+        return response
 
-                if len(messages) == 1:
-                    input_string = messages[0].get_content_string()
-                else:
-                    input_string = (
-                        f"[{', '.join([m.get_content_string() for m in messages if m.role == 'user' and m.content])}]"
-                    )
-                user_memory = UserMemory(
-                    memory_id=memory_id,
-                    memory=update.memory,
-                    topics=update.topics,
-                    last_updated=datetime.now(),
-                    input=input_string,
-                )
-
-                memory_id = self.add_user_memory(memory=user_memory, user_id=user_id)
-                if memory_id is None:
-                    continue
-                response_memories[memory_id] = user_memory
-
-        if not response_memories:
-            log_debug("No memories created")
-
-        return response_memories
-
-    async def acreate_user_memory(self, message: str, user_id: Optional[str] = None) -> Dict[str, UserMemory]:
+    async def acreate_user_memory(self, message: str, user_id: Optional[str] = None) -> str:
         """Creates a memory from a message and adds it to the memory db."""
         return await self.acreate_user_memories(messages=[Message(role="user", content=message)], user_id=user_id)
 
     async def acreate_user_memories(
         self, messages: List[Message], user_id: Optional[str] = None
-    ) -> Dict[str, UserMemory]:
+    ) -> str:
         """Creates memories from multiple messages and adds them to the memory db."""
         if not messages or not isinstance(messages, list):
             raise ValueError("Invalid messages list")
 
         if not self.memory_manager:
             raise ValueError("Memory manager not initialized")
+        
+        if self.db is None:
+            log_warning("MemoryDb not provided.")
+            return "Please provide a db to store memories"
 
         if user_id is None:
             user_id = "default"
 
         existing_memories = self.memories.get(user_id, {})  # type: ignore
         existing_memories = [
-            {"memory_id": memory.memory_id, "memory": memory.memory} for memory_id, memory in existing_memories.items()
+            {"memory_id": memory_id, "memory": memory.memory} for memory_id, memory in existing_memories.items()
         ]
-        memory_updates: Optional[MemoryUpdatesResponse] = await self.memory_manager.acreate_or_update_memories(
-            messages=messages, existing_memories=existing_memories
+        
+        response = await self.memory_manager.acreate_or_update_memories(  # type: ignore
+            messages=messages, existing_memories=existing_memories, user_id=user_id, db=self.db
         )
-        if memory_updates is None:
-            return {}
 
-        response_memories = {}
-        for update in memory_updates.updates:
-            # We have an existing memory id, so we need to replace the memory
-            if update.id is not None:
-                if len(messages) == 1:
-                    input_string = messages[0].get_content_string()
-                else:
-                    input_string = (
-                        f"[{', '.join([m.get_content_string() for m in messages if m.role == 'user' and m.content])}]"
-                    )
+        # We refresh from the DB
+        self.initialize()
 
-                user_memory = UserMemory(
-                    memory=update.memory, topics=update.topics, last_updated=datetime.now(), input=input_string
-                )
-                memory_id = self.replace_user_memory(memory_id=update.id, memory=user_memory, user_id=user_id)
-                if memory_id is None:
-                    continue
-                response_memories[memory_id] = user_memory
-            # We don't have an existing memory id, so we need to add a new memory
-            else:
-                if len(messages) == 1:
-                    input_string = messages[0].get_content_string()
-                else:
-                    input_string = (
-                        f"[{', '.join([m.get_content_string() for m in messages if m.role == 'user' and m.content])}]"
-                    )
-
-                user_memory = UserMemory(
-                    memory=update.memory, topics=update.topics, last_updated=datetime.now(), input=input_string
-                )
-                memory_id = self.add_user_memory(memory=user_memory, user_id=user_id)
-                response_memories[memory_id] = user_memory
-
-        if not response_memories:
-            log_debug("No memories created")
-
-        return response_memories
+        return response
 
     def update_memory_task(self, task: str, user_id: Optional[str] = None) -> str:
         """Updates the memory with a task"""
@@ -532,6 +448,8 @@ class Memory:
 
         if user_id is None:
             user_id = "default"
+            
+        print("HERE", task)
 
         existing_memories = self.memories.get(user_id, {})  # type: ignore
         existing_memories = [
@@ -742,7 +660,7 @@ class Memory:
 
         model = self.get_model()
 
-        self._update_model_for_semantic_search(model)
+        self._update_model_for_semantic_search()
 
         log_debug("Searching for memories", center=True)
 

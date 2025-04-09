@@ -1729,6 +1729,7 @@ class Agent:
         self.memory = cast(Memory, self.memory)
         session_messages: List[Message] = []
         if self.create_user_memories and run_messages.user_message is not None:
+            
             await self.memory.acreate_user_memory(
                 message=run_messages.user_message.get_content_string(), user_id=user_id
             )

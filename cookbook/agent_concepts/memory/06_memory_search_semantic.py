@@ -1,7 +1,7 @@
 from agno.memory.v2.memory import Memory, UserMemory
 from agno.models.google.gemini import Gemini
 
-memory = Memory(model=Gemini(id="gemini-2.0-flash-exp"), debug_mode=True)
+memory = Memory(model=Gemini(id="gemini-2.0-flash-exp"))
 
 john_doe_id = "john_doe@example.com"
 
@@ -22,6 +22,6 @@ memories = memory.search_user_memories(
     query="What does the user like to do on weekends?",
     retrieval_method="semantic",
 )
-print("John Doe's last_n memories:")
+print("John Doe's found memories:")
 for i, m in enumerate(memories):
     print(f"{i}: {m.memory}")

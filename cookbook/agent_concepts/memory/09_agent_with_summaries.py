@@ -7,7 +7,7 @@ Every time you run this, the `Memory` object will be re-initialized from the DB.
 from agno.agent.agent import Agent
 from agno.memory.v2.db.sqlite import SqliteMemoryDb
 from agno.memory.v2.memory import Memory
-from agno.models.google.gemini import Gemini
+from agno.models.openai.chat import OpenAIChat
 
 memory_db = SqliteMemoryDb(table_name="memory", db_file="tmp/memory.db")
 
@@ -21,7 +21,7 @@ session_id_1 = "1001"
 john_doe_id = "john_doe@example.com"
 
 agent = Agent(
-    model=Gemini(id="gemini-2.0-flash-exp"),
+    model=OpenAIChat(id="gpt-4o"),
     memory=memory,
     create_user_memories=True,
     create_session_summaries=True,

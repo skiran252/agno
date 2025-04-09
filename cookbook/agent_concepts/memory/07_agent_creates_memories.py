@@ -29,7 +29,6 @@ agent = Agent(
         table_name="agent_sessions", db_file="tmp/persistent_memory.db"
     ),
     create_user_memories=True,
-    debug_mode=True,
 )
 
 agent.print_response(
