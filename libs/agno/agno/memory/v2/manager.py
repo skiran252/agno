@@ -156,6 +156,7 @@ class MemoryManager:
             "  4. Decide to delete an existing memory using the `delete_memory` tool.",
             "  5. Decide to clear all memories using the `clear_memory` tool. Use this with extreme caution, as it will remove all memories from the database.",
             "You can call multiple of these tools in a single response if needed.",
+            "Only add or update memories if it is necessary to capture key information provided by the user.",
         ]
 
         if messages:
@@ -357,7 +358,7 @@ class MemoryManager:
                         last_updated=last_updated,
                     )
                 )
-                log_info(f"Memory added: {memory_id}")
+                log_debug(f"Memory added: {memory_id}")
                 return "Memory added successfully"
             except Exception as e:
                 log_warning(f"Error storing memory in db: {e}")
@@ -388,7 +389,7 @@ class MemoryManager:
                         last_updated=last_updated,
                     )
                 )
-                log_info(f"Memory updated")
+                log_debug("Memory updated")
                 return "Memory updated successfully"
             except Exception as e:
                 log_warning("Error storing memory in db: {e}")
@@ -403,7 +404,7 @@ class MemoryManager:
             """
             try:
                 db.delete_memory(memory_id=memory_id)
-                log_info("Memory deleted")
+                log_debug("Memory deleted")
                 return "Memory deleted successfully"
             except Exception as e:
                 log_warning(f"Error deleting memory in db: {e}")
@@ -415,7 +416,7 @@ class MemoryManager:
                 str: A message indicating if the memory was cleared successfully or not.
             """
             db.clear()
-            log_info("Memory cleared")
+            log_debug("Memory cleared")
             return "Memory cleared successfully"
 
         functions = []

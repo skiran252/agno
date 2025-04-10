@@ -405,7 +405,7 @@ def get_async_playground_router(
                     for run in runs:
                         first_user_message = None
                         for msg in run.get("messages", []):
-                            if msg.get("role") == "user":
+                            if msg.get("role") == "user" and msg.get("from_history", False) is False:
                                 first_user_message = msg
                                 break
                         agent_session_dict["runs"].append(
@@ -777,7 +777,7 @@ def get_async_playground_router(
                     for run in runs:
                         first_user_message = None
                         for msg in run.get("messages", []):
-                            if msg.get("role") == "user":
+                            if msg.get("role") == "user" and msg.get("from_history", False) is False:
                                 first_user_message = msg
                                 break
                         team_session_dict["runs"].append(
