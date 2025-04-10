@@ -15,7 +15,7 @@ from agno.team.team import Team
 from agno.tools.yfinance import YFinanceTools
 from utils import print_chat_history
 
-memory = Memory(model=OpenAIChat("gpt-4o"))
+memory = Memory()
 
 stock_searcher = Agent(
     name="Stock Searcher",
@@ -55,7 +55,6 @@ team = Team(
     enable_team_history=True,
     show_tool_calls=True,
     markdown=True,
-    debug_mode=True,
     show_members_responses=True,
     memory=memory,
 )

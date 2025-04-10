@@ -51,10 +51,10 @@ class SessionSummarizer:
         else:
             model.response_format = {"type": "json_object"}
 
-    def get_system_message(self, conversation: List[Message]) -> Message:
+
+    def get_system_message(self, conversation: List[Message], model: Model) -> Message:
         if self.system_prompt is not None:
             return Message(role="system", content=self.system_prompt)
-        self.model = cast(Model, self.model)
 
         # -*- Return a system message for summarization
         system_prompt = dedent("""\
@@ -73,7 +73,7 @@ class SessionSummarizer:
 
         system_prompt += "\n".join(conversation_messages)
 
-        if self.model.response_format == {"type": "json_object"}:
+        if model.response_format == {"type": "json_object"}:
             system_prompt += "\n" + get_json_output_prompt(SessionSummaryResponse)  # type: ignore
 
         return Message(role="system", content=system_prompt)
@@ -97,18 +97,18 @@ class SessionSummarizer:
 
         # Prepare the List of messages to send to the Model
         messages_for_model: List[Message] = [
-            self.get_system_message(conversation),
+            self.get_system_message(conversation, model=model_copy),
             # For models that require a non-system message
             Message(role="user", content="Provide the summary of the conversation."),
         ]
 
         # Generate a response from the Model (includes running function calls)
-        response = self.model.response(messages=messages_for_model)
+        response = model_copy.response(messages=messages_for_model)
         log_debug("SessionSummarizer End", center=True)
 
         # If the model natively supports structured outputs, the parsed value is already in the structured format
         if (
-            self.model.supports_native_structured_outputs
+            model_copy.supports_native_structured_outputs
             and response.parsed is not None
             and isinstance(response.parsed, SessionSummaryResponse)
         ):
@@ -150,18 +150,18 @@ class SessionSummarizer:
 
         # Prepare the List of messages to send to the Model
         messages_for_model: List[Message] = [
-            self.get_system_message(conversation),
+            self.get_system_message(conversation, model=model_copy),
             # For models that require a non-system message
             Message(role="user", content="Provide the summary of the conversation."),
         ]
 
         # Generate a response from the Model (includes running function calls)
-        response = await self.model.aresponse(messages=messages_for_model)
+        response = await model_copy.aresponse(messages=messages_for_model)
         log_debug("SessionSummarizer End", center=True)
 
         # If the model natively supports structured outputs, the parsed value is already in the structured format
         if (
-            self.model.supports_native_structured_outputs
+            model_copy.supports_native_structured_outputs
             and response.parsed is not None
             and isinstance(response.parsed, SessionSummaryResponse)
         ):

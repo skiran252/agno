@@ -75,8 +75,6 @@ team.print_response(
     stream_intermediate_steps=True,
     session_id=session_id,
 )
-
-
 print("Team Context: ", memory.team_context[session_id].text)
 for interaction in memory.team_context[session_id].member_interactions:
     print(

@@ -480,9 +480,6 @@ class Team:
         if self.memory is None:
             # A new instance of Memory (v2) is created if no memory is provided
             self.memory = Memory()
-        if isinstance(self.memory, Memory):
-            # Reset the team context for each run
-            self.memory.team_context = {}
 
         # Default to the team's model if no model is provided
         if isinstance(self.memory, Memory):
@@ -1154,9 +1151,6 @@ class Team:
         if self.memory is None:
             # A new instance of Memory (v2) is created if no memory is provided
             self.memory = Memory()
-        if isinstance(self.memory, Memory):
-            # Reset the team context for each run
-            self.memory.team_context = {}
 
         # Default to the team's model if no model is provided
         if isinstance(self.memory, Memory):
@@ -4595,11 +4589,8 @@ class Team:
                     self.memory.set_team_context_text(json.dumps(state))  # type: ignore
                 msg = f"Current team context: {self.memory.get_team_context_str()}"  # type: ignore
             else:
-                if isinstance(state, str):
-                    self.memory.set_team_context_text(run_id=self.run_id, text=state)  # type: ignore
-                elif isinstance(state, dict):
-                    self.memory.set_team_context_text(run_id=self.run_id, text=json.dumps(state))  # type: ignore
-                msg = f"Current team context: {self.memory.get_team_context_str(run_id=self.run_id)}"  # type: ignore
+                self.memory.set_team_context_text(session_id=session_id, text=state)  # type: ignore
+                msg = f"Current team context: {self.memory.get_team_context_str(session_id=session_id)}"  # type: ignore
             log_debug(msg)  # type: ignore
             return msg
 
@@ -4659,16 +4650,16 @@ class Team:
                 self.memory = cast(Memory, self.memory)
                 team_context_str = None
                 if self.enable_agentic_context:
-                    team_context_str = self.memory.get_team_context_str(run_id=self.run_id)  # type: ignore
+                    team_context_str = self.memory.get_team_context_str(session_id=session_id)  # type: ignore
 
                 team_member_interactions_str = None
                 if self.share_member_interactions:
-                    team_member_interactions_str = self.memory.get_team_member_interactions_str(run_id=self.run_id)  # type: ignore
-                    if context_images := self.memory.get_team_context_images(run_id=self.run_id):  # type: ignore
+                    team_member_interactions_str = self.memory.get_team_member_interactions_str(session_id=session_id)  # type: ignore
+                    if context_images := self.memory.get_team_context_images(session_id=session_id):  # type: ignore
                         images.extend([Image.from_artifact(img) for img in context_images])
-                    if context_videos := self.memory.get_team_context_videos(run_id=self.run_id):  # type: ignore
+                    if context_videos := self.memory.get_team_context_videos(session_id=session_id):  # type: ignore
                         videos.extend([Video.from_artifact(vid) for vid in context_videos])
-                    if context_audio := self.memory.get_team_context_audio(run_id=self.run_id):  # type: ignore
+                    if context_audio := self.memory.get_team_context_audio(session_id=session_id):  # type: ignore
                         audio.extend([Audio.from_artifact(aud) for aud in context_audio])
 
             # 3. Create the member agent task
@@ -4739,7 +4730,7 @@ class Team:
                 else:
                     self.memory = cast(Memory, self.memory)
                     self.memory.add_interaction_to_team_context(
-                        run_id=self.run_id,  # type: ignore
+                        session_id=session_id,
                         member_name=member_name,
                         task=task_description,
                         run_response=member_agent.run_response,  # type: ignore
@@ -4792,16 +4783,16 @@ class Team:
                 self.memory = cast(Memory, self.memory)
                 team_context_str = None
                 if self.enable_agentic_context:
-                    team_context_str = self.memory.get_team_context_str(run_id=self.run_id)  # type: ignore
+                    team_context_str = self.memory.get_team_context_str(session_id=session_id)  # type: ignore
 
                 team_member_interactions_str = None
                 if self.share_member_interactions:
-                    team_member_interactions_str = self.memory.get_team_member_interactions_str(run_id=self.run_id)  # type: ignore
-                    if context_images := self.memory.get_team_context_images(run_id=self.run_id):  # type: ignore
+                    team_member_interactions_str = self.memory.get_team_member_interactions_str(session_id=session_id)  # type: ignore
+                    if context_images := self.memory.get_team_context_images(session_id=session_id):  # type: ignore
                         images.extend([Image.from_artifact(img) for img in context_images])
-                    if context_videos := self.memory.get_team_context_videos(run_id=self.run_id):  # type: ignore
+                    if context_videos := self.memory.get_team_context_videos(session_id=session_id):  # type: ignore
                         videos.extend([Video.from_artifact(vid) for vid in context_videos])
-                    if context_audio := self.memory.get_team_context_audio(run_id=self.run_id):  # type: ignore
+                    if context_audio := self.memory.get_team_context_audio(session_id=session_id):  # type: ignore
                         audio.extend([Audio.from_artifact(aud) for aud in context_audio])
 
             # 3. Create the member agent task
@@ -4840,7 +4831,7 @@ class Team:
                     else:
                         self.memory = cast(Memory, self.memory)
                         self.memory.add_interaction_to_team_context(
-                            run_id=self.run_id,  # type: ignore
+                            session_id=session_id,
                             member_name=member_name,
                             task=task_description,
                             run_response=agent.run_response,
@@ -4954,16 +4945,16 @@ class Team:
                 self.memory = cast(Memory, self.memory)
                 team_context_str = None
                 if self.enable_agentic_context:
-                    team_context_str = self.memory.get_team_context_str(run_id=self.run_id)  # type: ignore
+                    team_context_str = self.memory.get_team_context_str(session_id=session_id)  # type: ignore
 
                 team_member_interactions_str = None
                 if self.share_member_interactions:
-                    team_member_interactions_str = self.memory.get_team_member_interactions_str(run_id=self.run_id)  # type: ignore
-                    if context_images := self.memory.get_team_context_images(run_id=self.run_id):  # type: ignore
+                    team_member_interactions_str = self.memory.get_team_member_interactions_str(session_id=session_id)  # type: ignore
+                    if context_images := self.memory.get_team_context_images(session_id=session_id):  # type: ignore
                         images.extend([Image.from_artifact(img) for img in context_images])
-                    if context_videos := self.memory.get_team_context_videos(run_id=self.run_id):  # type: ignore
+                    if context_videos := self.memory.get_team_context_videos(session_id=session_id):  # type: ignore
                         videos.extend([Video.from_artifact(vid) for vid in context_videos])
-                    if context_audio := self.memory.get_team_context_audio(run_id=self.run_id):  # type: ignore
+                    if context_audio := self.memory.get_team_context_audio(session_id=session_id):  # type: ignore
                         audio.extend([Audio.from_artifact(aud) for aud in context_audio])
 
             # 3. Create the member agent task
@@ -5038,7 +5029,7 @@ class Team:
             else:
                 self.memory = cast(Memory, self.memory)
                 self.memory.add_interaction_to_team_context(
-                    run_id=self.run_id,  # type: ignore
+                    session_id=session_id,
                     member_name=member_name,
                     task=task_description,
                     run_response=member_agent.run_response,  # type: ignore
@@ -5094,16 +5085,16 @@ class Team:
                 self.memory = cast(Memory, self.memory)
                 team_context_str = None
                 if self.enable_agentic_context:
-                    team_context_str = self.memory.get_team_context_str(run_id=self.run_id)  # type: ignore
+                    team_context_str = self.memory.get_team_context_str(session_id=session_id)  # type: ignore
 
                 team_member_interactions_str = None
                 if self.share_member_interactions:
-                    team_member_interactions_str = self.memory.get_team_member_interactions_str(run_id=self.run_id)  # type: ignore
-                    if context_images := self.memory.get_team_context_images(run_id=self.run_id):  # type: ignore
+                    team_member_interactions_str = self.memory.get_team_member_interactions_str(session_id=session_id)  # type: ignore
+                    if context_images := self.memory.get_team_context_images(session_id=session_id):  # type: ignore
                         images.extend([Image.from_artifact(img) for img in context_images])
-                    if context_videos := self.memory.get_team_context_videos(run_id=self.run_id):  # type: ignore
+                    if context_videos := self.memory.get_team_context_videos(session_id=session_id):  # type: ignore
                         videos.extend([Video.from_artifact(vid) for vid in context_videos])
-                    if context_audio := self.memory.get_team_context_audio(run_id=self.run_id):  # type: ignore
+                    if context_audio := self.memory.get_team_context_audio(session_id=session_id):  # type: ignore
                         audio.extend([Audio.from_artifact(aud) for aud in context_audio])
 
             # 3. Create the member agent task
@@ -5175,7 +5166,7 @@ class Team:
             else:
                 self.memory = cast(Memory, self.memory)
                 self.memory.add_interaction_to_team_context(
-                    run_id=self.run_id,  # type: ignore
+                    session_id=session_id,
                     member_name=member_name,
                     task=task_description,
                     run_response=member_agent.run_response,  # type: ignore
@@ -5327,7 +5318,7 @@ class Team:
             else:
                 self.memory = cast(Memory, self.memory)
                 self.memory.add_interaction_to_team_context(
-                    run_id=self.run_id,  # type: ignore
+                    session_id=session_id,  # type: ignore
                     member_name=member_name,
                     task=message.get_content_string(),
                     run_response=member_agent.run_response,  # type: ignore
@@ -5425,7 +5416,7 @@ class Team:
             else:
                 self.memory = cast(Memory, self.memory)
                 self.memory.add_interaction_to_team_context(
-                    run_id=self.run_id,  # type: ignore
+                    session_id=session_id,  # type: ignore
                     member_name=member_name,
                     task=message.get_content_string(),
                     run_response=member_agent.run_response,  # type: ignore
@@ -5635,7 +5626,6 @@ class Team:
                         log_warning(f"Failed to load runs from memory: {e}")
                 if "team_context" in session.memory:
                     from agno.memory.v2.memory import TeamContext
-
                     try:
                         self.memory.team_context = {
                             session_id: TeamContext.from_dict(team_context)
@@ -5748,7 +5738,8 @@ class Team:
                 self.memory = cast(Memory, self.memory)
                 # We fake the structure on storage, to maintain the interface with the legacy implementation
                 run_responses = self.memory.runs[session_id]  # type: ignore
-                memory_dict = {"runs": [rr.to_dict() for rr in run_responses]}
+                memory_dict = self.memory.to_dict()
+                memory_dict["runs"] = [rr.to_dict() for rr in run_responses]
         else:
             memory_dict = None
 

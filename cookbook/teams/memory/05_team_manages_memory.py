@@ -9,6 +9,7 @@ Steps:
 import asyncio
 
 from agno.agent import Agent
+from agno.memory.v2.db.sqlite import SqliteMemoryDb
 from agno.memory.v2.memory import Memory
 from agno.models.google.gemini import Gemini
 from agno.models.openai import OpenAIChat
@@ -17,7 +18,9 @@ from agno.team.team import Team
 from agno.tools.duckduckgo import DuckDuckGoTools
 from utils import print_team_memory
 
-memory = Memory(model=Gemini(id="gemini-2.0-flash-exp"))
+memory_db = SqliteMemoryDb(table_name="memory", db_file="tmp/memory.db")
+
+memory = Memory(model=Gemini(id="gemini-2.0-flash-exp"), db=memory_db)
 
 web_searcher = Agent(
     name="Web Searcher",

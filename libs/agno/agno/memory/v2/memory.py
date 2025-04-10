@@ -1,6 +1,7 @@
 from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import datetime
+import json
 from os import getenv
 from typing import Any, Dict, List, Literal, Optional, Union
 
@@ -35,6 +36,13 @@ class TeamMemberInteraction:
     task: str
     response: Union[RunResponse, TeamRunResponse]
 
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "member_name": self.member_name,
+            "task": self.task,
+            "response": self.response.to_dict(),
+        }
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "TeamMemberInteraction":
         return cls(member_name=data["member_name"], task=data["task"], response=RunResponse.from_dict(data["response"]))
@@ -45,6 +53,12 @@ class TeamContext:
     # List of team member interaction, represented as a request and a response
     member_interactions: List[TeamMemberInteraction] = field(default_factory=list)
     text: Optional[str] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "member_interactions": [interaction.to_dict() for interaction in self.member_interactions],
+            "text": self.text,
+        }
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "TeamContext":
@@ -76,7 +90,7 @@ class Memory:
     # runs per session
     runs: Optional[Dict[str, List[Union[RunResponse, TeamRunResponse]]]] = None
 
-    # Team context per run
+    # Team context per session
     team_context: Optional[Dict[str, TeamContext]] = None
 
     monitoring: bool = False
@@ -191,6 +205,12 @@ class Memory:
             for session_id, runs in self.runs.items():
                 if session_id is not None:
                     _memory_dict["runs"][session_id] = [run.to_dict() for run in runs]  # type: ignore
+
+        if self.team_context is not None:
+            _memory_dict["team_context"] = {}
+            for session_id, team_context in self.team_context.items():
+                if session_id is not None:
+                    _memory_dict["team_context"][session_id] = team_context.to_dict()
 
         _memory_dict = {k: v for k, v in _memory_dict.items() if v is not None}
         return _memory_dict
@@ -812,13 +832,13 @@ class Memory:
 
     # -*- Team Functions
     def add_interaction_to_team_context(
-        self, run_id: str, member_name: str, task: str, run_response: Union[RunResponse, TeamRunResponse]
+        self, session_id: str, member_name: str, task: str, run_response: Union[RunResponse, TeamRunResponse]
     ) -> None:
         if self.team_context is None:
             self.team_context = {}
-        if run_id not in self.team_context:
-            self.team_context[run_id] = TeamContext()
-        self.team_context[run_id].member_interactions.append(
+        if session_id not in self.team_context:
+            self.team_context[session_id] = TeamContext()
+        self.team_context[session_id].member_interactions.append(
             TeamMemberInteraction(
                 member_name=member_name,
                 task=task,
@@ -827,34 +847,42 @@ class Memory:
         )
         log_debug(f"Updated team context with member name: {member_name}")
 
-    def set_team_context_text(self, run_id: str, text: str) -> None:
+    def set_team_context_text(self, session_id: str, text: Union[dict, str]) -> None:
         if self.team_context is None:
             self.team_context = {}
-        if run_id not in self.team_context:
-            self.team_context[run_id] = TeamContext()
-
-        if self.team_context:
-            self.team_context[run_id].text = text
+        if session_id not in self.team_context:
+            self.team_context[session_id] = TeamContext()
+        if isinstance(text, dict):
+            if self.team_context[session_id].text:
+                try:
+                    current_context = json.loads(self.team_context[session_id].text)
+                except Exception:
+                    current_context = {}
+            else:
+                current_context = {}
+            current_context.update(text)
+            self.team_context[session_id].text = json.dumps(current_context)
         else:
-            self.team_context[run_id] = TeamContext(text=text)
+            # If string then we overwrite the current context
+            self.team_context[session_id].text = text
 
-    def get_team_context_str(self, run_id: str) -> str:
+    def get_team_context_str(self, session_id: str) -> str:
         if not self.team_context:
             return ""
-        run_team_context = self.team_context.get(run_id, None)
-        if run_team_context and run_team_context.text:
-            return f"<team context>\n{run_team_context.text}\n</team context>\n"
+        session_team_context = self.team_context.get(session_id, None)
+        if session_team_context and session_team_context.text:
+            return f"<team context>\n{session_team_context.text}\n</team context>\n"
         return ""
 
-    def get_team_member_interactions_str(self, run_id: str) -> str:
+    def get_team_member_interactions_str(self, session_id: str) -> str:
         if not self.team_context:
             return ""
         team_member_interactions_str = ""
-        run_team_context = self.team_context.get(run_id, None)
-        if run_team_context and run_team_context.member_interactions:
+        session_team_context = self.team_context.get(session_id, None)
+        if session_team_context and session_team_context.member_interactions:
             team_member_interactions_str += "<member interactions>\n"
 
-            for interaction in run_team_context.member_interactions:
+            for interaction in session_team_context.member_interactions:
                 response_dict = interaction.response.to_dict()
                 response_content = (
                     response_dict.get("content")
@@ -868,35 +896,35 @@ class Memory:
             team_member_interactions_str += "</member interactions>\n"
         return team_member_interactions_str
 
-    def get_team_context_images(self, run_id: str) -> List[ImageArtifact]:
+    def get_team_context_images(self, session_id: str) -> List[ImageArtifact]:
         if not self.team_context:
             return []
         images = []
-        run_team_context = self.team_context.get(run_id, None)
-        if run_team_context and run_team_context.member_interactions:
-            for interaction in run_team_context.member_interactions:
+        session_team_context = self.team_context.get(session_id, None)
+        if session_team_context and session_team_context.member_interactions:
+            for interaction in session_team_context.member_interactions:
                 if interaction.response.images:
                     images.extend(interaction.response.images)
         return images
 
-    def get_team_context_videos(self, run_id: str) -> List[VideoArtifact]:
+    def get_team_context_videos(self, session_id: str) -> List[VideoArtifact]:
         if not self.team_context:
             return []
         videos = []
-        run_team_context = self.team_context.get(run_id, None)
-        if run_team_context and run_team_context.member_interactions:
-            for interaction in run_team_context.member_interactions:
+        session_team_context = self.team_context.get(session_id, None)
+        if session_team_context and session_team_context.member_interactions:
+            for interaction in session_team_context.member_interactions:
                 if interaction.response.videos:
                     videos.extend(interaction.response.videos)
         return videos
 
-    def get_team_context_audio(self, run_id: str) -> List[AudioArtifact]:
+    def get_team_context_audio(self, session_id: str) -> List[AudioArtifact]:
         if not self.team_context:
             return []
         audio = []
-        run_team_context = self.team_context.get(run_id, None)
-        if run_team_context and run_team_context.member_interactions:
-            for interaction in run_team_context.member_interactions:
+        session_team_context = self.team_context.get(session_id, None)
+        if session_team_context and session_team_context.member_interactions:
+            for interaction in session_team_context.member_interactions:
                 if interaction.response.audio:
                     audio.extend(interaction.response.audio)
         return audio

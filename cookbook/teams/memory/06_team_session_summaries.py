@@ -39,7 +39,7 @@ team = Team(
     instructions=["You can search the web for information."],
     memory=memory,
     # Enable the team to make session summaries
-    create_session_summaries=True,
+    enable_session_summaries=True,
     show_tool_calls=True,
     markdown=True,
     show_members_responses=True,
