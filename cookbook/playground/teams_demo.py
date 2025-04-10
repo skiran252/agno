@@ -30,7 +30,7 @@ file_agent = Agent(
         table_name="agent_sessions", db_url=db_url, auto_upgrade_schema=True
     ),
     memory=memory,
-    create_user_memories=True,
+    enable_user_memories=True,
     instructions=[
         "You are an AI agent that can analyze files.",
         "You are given a file and you need to answer questions about the file.",
@@ -48,7 +48,7 @@ video_agent = Agent(
         table_name="agent_sessions", db_url=db_url, auto_upgrade_schema=True
     ),
     memory=memory,
-    create_user_memories=True,
+    enable_user_memories=True,
     add_history_to_messages=True,
     add_datetime_to_instructions=True,
     show_tool_calls=True,
@@ -64,7 +64,7 @@ audio_agent = Agent(
         table_name="agent_sessions", db_url=db_url, auto_upgrade_schema=True
     ),
     memory=memory,
-    create_user_memories=True,
+    enable_user_memories=True,
     add_history_to_messages=True,
     add_datetime_to_instructions=True,
     show_tool_calls=True,
@@ -81,7 +81,7 @@ web_agent = Agent(
         "You are an experienced web researcher and news analyst! 🔍",
     ],
     memory=memory,
-    create_user_memories=True,
+    enable_user_memories=True,
     show_tool_calls=True,
     markdown=True,
     storage=PostgresStorage(
@@ -106,7 +106,7 @@ finance_agent = Agent(
         "Analyze trading patterns and volume trends",
     ],
     memory=memory,
-    create_user_memories=True,
+    enable_user_memories=True,
     show_tool_calls=True,
     markdown=True,
 )
@@ -117,7 +117,7 @@ simple_agent = Agent(
     model=OpenAIChat(id="gpt-4o"),
     instructions=["You are a simple agent"],
     memory=memory,
-    create_user_memories=True,
+    enable_user_memories=True,
 )
 
 research_agent = Agent(
@@ -128,7 +128,7 @@ research_agent = Agent(
     tools=[DuckDuckGoTools(), ExaTools()],
     agent_id="research_agent",
     memory=memory,
-    create_user_memories=True,
+    enable_user_memories=True,
 )
 
 research_team = Team(
@@ -145,7 +145,7 @@ research_team = Team(
         "You are the lead researcher of a research team! 🔍",
     ],
     memory=memory,
-    create_user_memories=True,
+    enable_user_memories=True,
     add_datetime_to_instructions=True,
     show_tool_calls=True,
     markdown=True,
@@ -172,7 +172,7 @@ multimodal_team = Team(
         "You are the lead editor of a prestigious financial news desk! 📰",
     ],
     memory=memory,
-    create_user_memories=True,
+    enable_user_memories=True,
     storage=PostgresStorage(
         table_name="multimodal_team",
         db_url=db_url,
@@ -217,7 +217,7 @@ agent_team = Team(
         auto_upgrade_schema=True,
     ),
     memory=memory,
-    create_user_memories=True,
+    enable_user_memories=True,
     expected_output="A good financial news report.",
 )
 

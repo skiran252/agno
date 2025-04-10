@@ -164,10 +164,10 @@ class Team:
     memory: Optional[Union[TeamMemory, Memory]] = None
     # Enable the agent to manage memories of the user
     enable_agentic_memory: bool = False
-    # If True, the agent creates user memories at the end of runs
-    create_user_memories: bool = False
+    # If True, the agent creates/updates user memories at the end of runs
+    enable_user_memories: bool = False
     # If True, the agent creates/updates session summaries at the end of runs
-    create_session_summaries: bool = False
+    enable_session_summaries: bool = False
 
     # --- Agent History ---
     # If True, enable the team history
@@ -229,8 +229,8 @@ class Team:
         parse_response: bool = True,
         memory: Optional[Union[TeamMemory, Memory]] = None,
         enable_agentic_memory: bool = False,
-        create_user_memories: bool = False,
-        create_session_summaries: bool = False,
+        enable_user_memories: bool = False,
+        enable_session_summaries: bool = False,
         enable_team_history: bool = False,
         num_of_interactions_from_history: int = 3,
         storage: Optional[Storage] = None,
@@ -286,8 +286,8 @@ class Team:
         self.memory = memory
 
         self.enable_agentic_memory = enable_agentic_memory
-        self.create_user_memories = create_user_memories
-        self.create_session_summaries = create_session_summaries
+        self.enable_user_memories = enable_user_memories
+        self.enable_session_summaries = enable_session_summaries
 
         self.enable_team_history = enable_team_history
         self.num_of_interactions_from_history = num_of_interactions_from_history
@@ -1760,24 +1760,24 @@ class Team:
         self, run_messages: RunMessages, session_id: str, user_id: Optional[str] = None
     ) -> None:
         self.memory = cast(Memory, self.memory)
-        if self.create_user_memories and run_messages.user_message is not None:
+        if self.enable_user_memories and run_messages.user_message is not None:
             self.memory.create_user_memory(message=run_messages.user_message.get_content_string(), user_id=user_id)
 
         # Update the session summary if needed
-        if self.create_session_summaries:
+        if self.enable_session_summaries:
             self.memory.create_session_summary(session_id=session_id, user_id=user_id)
 
     async def _amake_memories_and_summaries(
         self, run_messages: RunMessages, session_id: str, user_id: Optional[str] = None
     ) -> None:
         self.memory = cast(Memory, self.memory)
-        if self.create_user_memories and run_messages.user_message is not None:
+        if self.enable_user_memories and run_messages.user_message is not None:
             await self.memory.acreate_user_memory(
                 message=run_messages.user_message.get_content_string(), user_id=user_id
             )
 
         # Update the session summary if needed
-        if self.create_session_summaries:
+        if self.enable_session_summaries:
             await self.memory.acreate_session_summary(session_id=session_id, user_id=user_id)
 
     ###########################################################################
@@ -4184,7 +4184,7 @@ class Team:
 
         # Then add memories to the system prompt
         if self.memory:
-            if isinstance(self.memory, Memory) and (self.create_user_memories or self.enable_agentic_memory):
+            if isinstance(self.memory, Memory) and (self.enable_user_memories or self.enable_agentic_memory):
                 if not user_id:
                     user_id = "default"
                 user_memories = self.memory.memories.get(user_id, {})  # type: ignore
@@ -4213,7 +4213,7 @@ class Team:
                         "If you use the `update_memory` tool, remember to pass on the response to the user.\n\n"
                     )
             # Then add a summary of the interaction to the system prompt
-            if isinstance(self.memory, Memory) and self.create_session_summaries:
+            if isinstance(self.memory, Memory) and self.enable_session_summaries:
                 if not user_id:
                     user_id = "default"
                 session_summary: SessionSummary = self.memory.summaries.get(user_id, {}).get(session_id, None)  # type: ignore
@@ -5644,30 +5644,36 @@ class Team:
                     except Exception as e:
                         log_warning(f"Failed to load team context: {e}")
                 if "memories" in session.memory:
-                    from agno.memory.v2.memory import UserMemory as UserMemoryV2
+                    if self.memory.memories is not None:
+                        pass
+                    else:
+                        from agno.memory.v2.memory import UserMemory as UserMemoryV2
 
-                    try:
-                        self.memory.memories = {
-                            user_id: {
-                                memory_id: UserMemoryV2.from_dict(memory) for memory_id, memory in user_memories.items()
+                        try:
+                            self.memory.memories = {
+                                user_id: {
+                                    memory_id: UserMemoryV2.from_dict(memory) for memory_id, memory in user_memories.items()
+                                }
+                                for user_id, user_memories in session.memory["memories"].items()
                             }
-                            for user_id, user_memories in session.memory["memories"].items()
-                        }
-                    except Exception as e:
-                        log_warning(f"Failed to load user memories: {e}")
+                        except Exception as e:
+                            log_warning(f"Failed to load user memories: {e}")
                 if "summaries" in session.memory:
-                    from agno.memory.v2.memory import SessionSummary as SessionSummaryV2
+                    if self.memory.summaries is not None:
+                        pass
+                    else:
+                        from agno.memory.v2.memory import SessionSummary as SessionSummaryV2
 
-                    try:
-                        self.memory.summaries = {
-                            user_id: {
-                                session_id: SessionSummaryV2.from_dict(summary)
-                                for session_id, summary in user_session_summaries.items()
+                        try:
+                            self.memory.summaries = {
+                                user_id: {
+                                    session_id: SessionSummaryV2.from_dict(summary)
+                                    for session_id, summary in user_session_summaries.items()
+                                }
+                                for user_id, user_session_summaries in session.memory["summaries"].items()
                             }
-                            for user_id, user_session_summaries in session.memory["summaries"].items()
-                        }
-                    except Exception as e:
-                        log_warning(f"Failed to load session summaries: {e}")
+                        except Exception as e:
+                            log_warning(f"Failed to load session summaries: {e}")
         log_debug(f"-*- TeamSession loaded: {session.session_id}")
 
     ###########################################################################

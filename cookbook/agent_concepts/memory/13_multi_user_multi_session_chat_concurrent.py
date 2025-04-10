@@ -36,7 +36,7 @@ chat_agent = Agent(
     model=Gemini(id="gemini-2.0-flash-exp"),
     storage=agent_storage,
     memory=memory,
-    create_user_memories=True,
+    enable_user_memories=True,
 )
 
 

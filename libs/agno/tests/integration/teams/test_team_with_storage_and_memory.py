@@ -105,7 +105,7 @@ def route_team(web_agent, finance_agent, analysis_agent, team_storage, memory):
         members=[web_agent, finance_agent, analysis_agent],
         storage=team_storage,
         memory=memory,
-        create_user_memories=True,
+        enable_user_memories=True,
     )
 
 

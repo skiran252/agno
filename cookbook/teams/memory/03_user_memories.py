@@ -7,8 +7,7 @@ Steps:
 """
 
 from agno.agent import Agent
-from agno.memory.db.sqlite import SqliteMemoryDb
-from agno.memory.team import TeamMemory
+from agno.memory.v2.db.sqlite import SqliteMemoryDb
 from agno.memory.v2.memory import Memory
 from agno.models.google.gemini import Gemini
 from agno.models.openai import OpenAIChat
@@ -69,7 +68,7 @@ team = Team(
     enable_team_history=True,
     num_of_interactions_from_history=5,
     # Create and store personalized memories for this user
-    create_user_memories=True,
+    enable_user_memories=True,
     show_tool_calls=True,
     markdown=True,
     show_members_responses=True,

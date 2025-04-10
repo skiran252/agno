@@ -69,7 +69,7 @@ def chat_agent(agent_storage, memory):
         model=OpenAIChat(id="gpt-4o-mini"),
         storage=agent_storage,
         memory=memory,
-        create_user_memories=True,
+        enable_user_memories=True,
     )
 
 
