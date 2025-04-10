@@ -9,6 +9,11 @@ from agno.memory.v2.db.sqlite import SqliteMemoryDb
 from agno.memory.v2.memory import Memory
 from agno.memory.v2.summarizer import SessionSummarizer
 from agno.models.openai.chat import OpenAIChat
+from agno.storage.sqlite import SqliteStorage
+
+agent_storage = SqliteStorage(
+    table_name="agent_sessions", db_file="tmp/persistent_memory.db"
+)
 
 memory_db = SqliteMemoryDb(table_name="memory", db_file="tmp/memory.db")
 
@@ -24,8 +29,8 @@ john_doe_id = "john_doe@example.com"
 agent = Agent(
     model=OpenAIChat(id="gpt-4o"),
     memory=memory,
-    enable_user_memories=True,
     enable_session_summaries=True,
+    storage=agent_storage,
 )
 
 agent.print_response(
@@ -35,15 +40,6 @@ agent.print_response(
     session_id=session_id_1,
 )
 
-agent.print_response(
-    "What are my hobbies?", stream=True, user_id=john_doe_id, session_id=session_id_1
-)
-
-
-memories = memory.get_user_memories(user_id=john_doe_id)
-print("John Doe's memories:")
-for i, m in enumerate(memories):
-    print(f"{i}: {m.memory}")
 session_summary = memory.get_session_summary(
     user_id=john_doe_id, session_id=session_id_1
 )
@@ -60,18 +56,6 @@ agent.print_response(
     session_id=session_id_2,
 )
 
-agent.print_response(
-    "What are my hobbies?",
-    stream=True,
-    user_id=mark_gonzales_id,
-    session_id=session_id_2,
-)
-
-
-memories = memory.get_user_memories(user_id=mark_gonzales_id)
-print("Mark Gonzales's memories:")
-for i, m in enumerate(memories):
-    print(f"{i}: {m.memory}")
 print(
     f"Session summary: {memory.get_session_summary(user_id=mark_gonzales_id, session_id=session_id_2).summary}\n"
 )

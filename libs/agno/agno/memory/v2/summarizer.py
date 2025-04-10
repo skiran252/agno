@@ -1,3 +1,4 @@
+from copy import deepcopy
 from dataclasses import dataclass
 from textwrap import dedent
 from typing import Any, Dict, List, Optional, cast
@@ -33,14 +34,14 @@ class SessionSummarizer:
 
     system_prompt: Optional[str] = None
 
-    def update_model(self) -> None:
-        self.model = cast(Model, self.model)
-        if self.model.supports_native_structured_outputs:
-            self.model.response_format = SessionSummaryResponse
-            self.model.structured_outputs = True
+    def update_model(self, model: Model) -> None:
+        model = cast(Model, model)
+        if model.supports_native_structured_outputs:
+            model.response_format = SessionSummaryResponse
+            model.structured_outputs = True
 
-        elif self.model.supports_json_schema_outputs:
-            self.model.response_format = {
+        elif model.supports_json_schema_outputs:
+            model.response_format = {
                 "type": "json_schema",
                 "json_schema": {
                     "name": SessionSummaryResponse.__name__,
@@ -48,7 +49,7 @@ class SessionSummarizer:
                 },
             }
         else:
-            self.model.response_format = {"type": "json_object"}
+            model.response_format = {"type": "json_object"}
 
     def get_system_message(self, conversation: List[Message]) -> Message:
         if self.system_prompt is not None:
@@ -91,7 +92,8 @@ class SessionSummarizer:
             log_info("No conversation provided for summarization.")
             return None
 
-        self.update_model()
+        model_copy = deepcopy(self.model)
+        self.update_model(model_copy)
 
         # Prepare the List of messages to send to the Model
         messages_for_model: List[Message] = [
@@ -143,7 +145,8 @@ class SessionSummarizer:
             log_info("No conversation provided for summarization.")
             return None
 
-        self.update_model()
+        model_copy = deepcopy(self.model)
+        self.update_model(model_copy)
 
         # Prepare the List of messages to send to the Model
         messages_for_model: List[Message] = [
