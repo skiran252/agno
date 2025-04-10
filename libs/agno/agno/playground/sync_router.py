@@ -401,9 +401,11 @@ def get_sync_playground_router(
                     for run in runs:
                         first_user_message = None
                         for msg in run.get("messages", []):
-                            if msg.get("role") == "user":
+                            if msg.get("role") == "user" and msg.get("from_history", False) is False:
                                 first_user_message = msg
                                 break
+                        # Remove the memory from the response
+                        run.pop("memory", None)
                         agent_session_dict["runs"].append(
                             {
                                 "message": first_user_message,
@@ -771,9 +773,11 @@ def get_sync_playground_router(
                     for run in runs:
                         first_user_message = None
                         for msg in run.get("messages", []):
-                            if msg.get("role") == "user":
+                            if msg.get("role") == "user" and msg.get("from_history", False) is False:
                                 first_user_message = msg
                                 break
+                        # Remove the memory from the response
+                        run.pop("memory", None)
                         team_session_dict["runs"].append(
                             {
                                 "message": first_user_message,
