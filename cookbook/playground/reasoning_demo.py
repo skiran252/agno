@@ -73,6 +73,16 @@ native_model_agent = Agent(
     markdown=True,
 )
 
+claude_thinking_agent = Agent(
+    name="Claude Thinking Agent",
+    model=Claude(
+        id="claude-3-7-sonnet-20250219",
+        max_tokens=2048,
+        thinking={"type": "enabled", "budget_tokens": 1024},
+    ),
+    markdown=True,
+)
+
 
 app = Playground(
     agents=[
@@ -80,6 +90,7 @@ app = Playground(
         reasoning_tool_agent,
         reasoning_model_agent,
         native_model_agent,
+        claude_thinking_agent,
     ]
 ).get_app()
 
