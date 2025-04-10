@@ -408,6 +408,8 @@ def get_async_playground_router(
                             if msg.get("role") == "user" and msg.get("from_history", False) is False:
                                 first_user_message = msg
                                 break
+                        # Remove the memory from the response
+                        run.pop("memory", None)
                         agent_session_dict["runs"].append(
                             {
                                 "message": first_user_message,
@@ -780,6 +782,8 @@ def get_async_playground_router(
                             if msg.get("role") == "user" and msg.get("from_history", False) is False:
                                 first_user_message = msg
                                 break
+                        # Remove the memory from the response
+                        team_session_dict.pop("memory", None)
                         team_session_dict["runs"].append(
                             {
                                 "message": first_user_message,
