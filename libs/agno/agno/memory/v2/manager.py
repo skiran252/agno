@@ -40,6 +40,13 @@ class MemoryManager:
 
     # Provide the system prompt for the manager as a string
     system_prompt: Optional[str] = None
+    
+
+    def __init__(self, model: Optional[Model] = None, system_prompt: Optional[str] = None):
+        self.model = model
+        if self.model is not None and isinstance(self.model, str):
+            raise ValueError("Model must be a Model object, not a string")
+        self.system_prompt = system_prompt
 
     def add_tools_to_model(self, model: Model, tools: List[Callable]) -> None:
         model = cast(Model, model)

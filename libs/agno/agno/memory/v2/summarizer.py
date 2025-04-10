@@ -34,6 +34,12 @@ class SessionSummarizer:
 
     system_prompt: Optional[str] = None
 
+    def __init__(self, model: Optional[Model] = None, system_prompt: Optional[str] = None):
+        self.model = model
+        if self.model is not None and isinstance(self.model, str):
+            raise ValueError("Model must be a Model object, not a string")
+        self.system_prompt = system_prompt
+
     def update_model(self, model: Model) -> None:
         model = cast(Model, model)
         if model.supports_native_structured_outputs:

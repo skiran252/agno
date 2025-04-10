@@ -116,6 +116,9 @@ class Memory:
         self.debug_mode = debug_mode
 
         self.model = model
+        
+        if self.model is not None and isinstance(self.model, str):
+            raise ValueError("Model must be a Model object, not a string")
 
         self.memory_manager = memory_manager
 
