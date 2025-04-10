@@ -129,7 +129,7 @@ reasoning_agent = Agent(
 code_execution_agent = Agent(
     name="Code Execution Sandbox",
     agent_id="e2b-sandbox",
-    model=OpenAIChat(id="gpt-4o"),
+    model=OpenAIChat(id="gpt-4o-mini"),
     tools=[E2BTools()],
     markdown=True,
     show_tool_calls=True,
@@ -147,7 +147,7 @@ code_execution_agent = Agent(
 agent_team = Team(
     name="Agent Team",
     mode="route",
-    model=OpenAIChat("gpt-4o"),
+    model=Claude(id="claude-3-5-sonnet-latest"),
     members=[
         web_agent,
         finance_agent,
@@ -184,12 +184,12 @@ agent_team.print_response(
     "Summarize analyst recommendations and share the latest news for NVDA", stream=True
 )
 
-image_path = Path(__file__).parent.joinpath("sample.jpg")
-# # Use image agent to analyze the image
-agent_team.print_response(
-    "Write a 3 sentence fiction story about the image",
-    images=[Image(filepath=image_path)],
-)
+# image_path = Path(__file__).parent.joinpath("sample.jpg")
+# # # Use image agent to analyze the image
+# agent_team.print_response(
+#     "Write a 3 sentence fiction story about the image",
+#     images=[Image(filepath=image_path)],
+# )
 
 # Use audio agent to analyze the audio
 # url = "https://agno-public.s3.amazonaws.com/demo_data/sample_conversation.wav"
@@ -222,18 +222,18 @@ agent_team.print_response(
 # agent_team.print_response("9.11 and 9.9 -- which is bigger?", stream=True)
 
 
-pdf_path = Path(__file__).parent.joinpath("ThaiRecipes.pdf")
+# pdf_path = Path(__file__).parent.joinpath("ThaiRecipes.pdf")
 
-# Download the file using the download_file function
-download_file(
-    "https://agno-public.s3.amazonaws.com/recipes/ThaiRecipes.pdf", str(pdf_path)
-)
-# Use file analysis agent to analyze the file
-agent_team.print_response(
-    "Summarize the contents of the attached file.",
-    files=[
-        File(
-            filepath=pdf_path,
-        ),
-    ],
-)
+# # Download the file using the download_file function
+# download_file(
+#     "https://agno-public.s3.amazonaws.com/recipes/ThaiRecipes.pdf", str(pdf_path)
+# )
+# # Use file analysis agent to analyze the file
+# agent_team.print_response(
+#     "Summarize the contents of the attached file.",
+#     files=[
+#         File(
+#             filepath=pdf_path,
+#         ),
+#     ],
+# )

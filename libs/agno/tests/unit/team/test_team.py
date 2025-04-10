@@ -57,13 +57,13 @@ def test_team_system_message_content_minimal(team):
     assert "Agent 1:" in members_content
     assert "ID: web-agent" in members_content
     assert "Name: Web Agent" in members_content
-    assert "Role: Search the web for information" not in members_content
+    assert "Role: Search the web for information" in members_content
     assert "duckduckgo_search" not in members_content
 
     assert "Agent 2:" in members_content
     assert "ID: finance-agent" in members_content
     assert "Name: Finance Agent" in members_content
-    assert "Role: Get financial data" not in members_content
+    assert "Role: Get financial data" in members_content
     assert "get_current_stock_price" not in members_content
 
 
