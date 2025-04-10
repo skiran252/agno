@@ -9,6 +9,7 @@ from agno.models.openai import OpenAIChat
 from agno.playground import Playground, serve_playground_app
 from agno.storage.sqlite import SqliteStorage
 from agno.tools.reasoning import ReasoningTools
+from agno.tools.yfinance import YFinanceTools
 
 agent_storage_file: str = "tmp/agents.db"
 image_agent_storage_file: str = "tmp/image_agent.db"
@@ -57,16 +58,18 @@ reasoning_tool_agent = Agent(
 )
 
 native_model_agent = Agent(
+    model=OpenAIChat(id="o3-mini", reasoning_effort="high"),
     name="Native Model Agent",
-    role="Answer basic questions",
-    agent_id="native-model-agent",
-    model=OpenAIChat(id="o3-mini"),
-    storage=SqliteStorage(
-        table_name="simple_agent", db_file=agent_storage_file, auto_upgrade_schema=True
-    ),
-    add_history_to_messages=True,
-    num_history_responses=3,
-    add_datetime_to_instructions=True,
+    tools=[
+        YFinanceTools(
+            stock_price=True,
+            analyst_recommendations=True,
+            company_info=True,
+            company_news=True,
+        )
+    ],
+    instructions="Use tables to display data.",
+    show_tool_calls=True,
     markdown=True,
 )
 
