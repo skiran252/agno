@@ -4,16 +4,11 @@ from datetime import datetime
 from textwrap import dedent
 
 from agno.agent import Agent
+from agno.models.anthropic import Claude
 from agno.models.openai import OpenAIChat
-from agno.tools.reasoning import ReasoningTools
 from agno.playground import Playground, serve_playground_app
 from agno.storage.sqlite import SqliteStorage
-from agno.models.anthropic import Claude
-from agno.tools.dalle import DalleTools
-from agno.tools.duckduckgo import DuckDuckGoTools
-from agno.tools.exa import ExaTools
-from agno.tools.yfinance import YFinanceTools
-from agno.tools.youtube import YouTubeTools
+from agno.tools.reasoning import ReasoningTools
 
 agent_storage_file: str = "tmp/agents.db"
 image_agent_storage_file: str = "tmp/image_agent.db"
@@ -58,7 +53,7 @@ reasoning_tool_agent = Agent(
     num_history_responses=3,
     add_datetime_to_instructions=True,
     markdown=True,
-    tools=[ ReasoningTools()],
+    tools=[ReasoningTools()],
 )
 
 native_model_agent = Agent(
