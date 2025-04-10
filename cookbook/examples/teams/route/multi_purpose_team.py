@@ -11,6 +11,7 @@ from agno.tools.calculator import CalculatorTools
 from agno.tools.dalle import DalleTools
 from agno.tools.duckduckgo import DuckDuckGoTools
 from agno.tools.e2b import E2BTools
+from agno.tools.reasoning import ReasoningTools
 from agno.tools.yfinance import YFinanceTools
 from agno.utils.media import download_file
 
@@ -161,32 +162,34 @@ agent_team = Team(
         "You are a team of agents that can answer questions about the web, finance, images, audio, and files.",
         "You can use your member agents to answer the questions.",
         "if you are asked about a file, use the file analysis agent to analyze the file.",
+        "You can also answer directly, you don't HAVE to forward the question to a member agent.",
     ],
     show_tool_calls=True,
     markdown=True,
-    debug_mode=True,
+    # debug_mode=True,
     show_members_responses=True,
 )
 
 # Use the reasoning agent to reason about the result
-
 agent_team.print_response(
     "What is the square root of 6421123 times the square root of 9485271", stream=True
 )
-# Use web and finance agents to answer the question
-# agent_team.print_response(
-#     "Summarize analyst recommendations and share the latest news for NVDA", stream=True
-# )
-# agent_team.print_response(
-#     "Calculate the sum of 10 and 20 and give write something about how you did the calculation", stream=True
-# )
+agent_team.print_response(
+    "Calculate the sum of 10 and 20 and give write something about how you did the calculation",
+    stream=True,
+)
 
-# image_path = Path(__file__).parent.joinpath("sample.jpg")
-# # # Use image agent to analyze the image
-# agent_team.print_response(
-#     "Write a 3 sentence fiction story about the image",
-#     images=[Image(filepath=image_path)],
-# )
+# Use web and finance agents to answer the question
+agent_team.print_response(
+    "Summarize analyst recommendations and share the latest news for NVDA", stream=True
+)
+
+image_path = Path(__file__).parent.joinpath("sample.jpg")
+# # Use image agent to analyze the image
+agent_team.print_response(
+    "Write a 3 sentence fiction story about the image",
+    images=[Image(filepath=image_path)],
+)
 
 # Use audio agent to analyze the audio
 # url = "https://agno-public.s3.amazonaws.com/demo_data/sample_conversation.wav"

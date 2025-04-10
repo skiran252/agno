@@ -508,6 +508,8 @@ class Team:
                 )
                 _tools.append(forward_task_func)
 
+                _tools.append(self.get_members_information)
+
             elif self.mode == "coordinate":
                 _tools.append(
                     self.get_transfer_task_function(
@@ -522,6 +524,8 @@ class Team:
 
                 if self.enable_agentic_context:
                     _tools.append(self.set_team_context)
+
+                _tools.append(self.get_members_information)
             elif self.mode == "collaborate":
                 run_member_agents_func = self.get_run_member_agents_function(
                     stream=stream,
@@ -535,6 +539,8 @@ class Team:
 
                 if self.enable_agentic_context:
                     _tools.append(self.set_team_context)
+
+                _tools.append(self.get_members_information)
 
             self._add_tools_to_model(self.model, tools=_tools)  # type: ignore
 
@@ -3767,22 +3773,29 @@ class Team:
             # Set functions on the model
             model.set_functions(functions=self._functions_for_model)
 
-    def get_members_system_message_content(self, indent: int = 0) -> str:
+    def get_members_system_message_content(self, indent: int = 0, minimal: bool = False) -> str:
         system_message_content = ""
         for idx, member in enumerate(self.members):
+            url_safe_member_id = (
+                member.name.lower().replace(" ", "-").replace("_", "-") if member.name is not None else None
+            )
+
             if isinstance(member, Team):
                 system_message_content += f"{indent * ' '} - Team: {member.name}\n"
+                system_message_content += f"{indent * ' '} - ID: {url_safe_member_id}\n"
+
                 if member.members is not None:
                     system_message_content += member.get_members_system_message_content(indent=indent + 2)
             else:
                 system_message_content += f"{indent * ' '} - Agent {idx + 1}:\n"
                 if member.name is not None:
+                    system_message_content += f"{indent * ' '}   - ID: {url_safe_member_id}\n"
                     system_message_content += f"{indent * ' '}   - Name: {member.name}\n"
                 if member.role is not None:
                     system_message_content += f"{indent * ' '}   - Role: {member.role}\n"
-                if member.description is not None:
+                if member.description is not None and not minimal:
                     system_message_content += f"{indent * ' '}   - Description: {member.description}\n"
-                if member.tools is not None:
+                if member.tools is not None and not minimal:
                     system_message_content += f"{indent * ' '}   - Available tools:\n"
                     tool_name_and_description = []
 
@@ -4227,6 +4240,12 @@ class Team:
                 break
         return json.dumps(history)
 
+    def get_members_information(self) -> str:
+        """
+        Get information about the members of the team, including their IDs, names, and roles.
+        """
+        return self.get_members_system_message_content(indent=0)
+
     def set_team_context(self, state: Union[str, dict]) -> str:
         """
         Set the team's shared context with the given state.
@@ -4495,23 +4514,25 @@ class Team:
         if not files:
             files = []
 
-        def transfer_task_to_member(agent_name: str, task_description: str, expected_output: str) -> Iterator[str]:
+        def transfer_task_to_member(
+            member_id: str, task_description: str, expected_output: Optional[str] = None
+        ) -> Iterator[str]:
             """
             Use this function to transfer a task to the nominated agent.
             You must provide a clear and concise description of the task the agent should achieve AND the expected output.
             Args:
-                agent_name (str): The name of the agent to transfer the task to.
+                member_id (str): The ID of the agent to transfer the task to.
                 task_description (str): A clear and concise description of the task the agent should achieve.
-                expected_output (str): The expected output from the agent.
+                expected_output (str): The expected output from the agent (optional).
             Returns:
                 str: The result of the delegated task.
             """
             self.memory = cast(TeamMemory, self.memory)
 
             # Find the member agent using the helper function
-            result = self._find_member_by_name(agent_name)
+            result = self._find_member_by_id(member_id)
             if result is None:
-                yield f"Agent with name {agent_name} not found in the team or any subteams. Please choose the correct agent from the list of agents."
+                yield f"Agent with ID {member_id} not found in the team or any subteams. Please choose the correct agent from the list of agents:\n{self.get_members_system_message_content(indent=0, minimal=True)}"
                 return
 
             member_agent_index, member_agent = result
@@ -4533,8 +4554,9 @@ class Team:
                     audio.extend([Audio.from_artifact(aud) for aud in context_audio])
 
             # 3. Create the member agent task
-            member_agent_task = f"You are a member of a team of agents. Your goal is to complete the following task:\n\n{task_description}\n\n<expected_output>\n{expected_output}\n</expected_output>"
-
+            member_agent_task = f"You are a member of a team of agents. Your goal is to complete the following task:\n\n{task_description}"
+            if expected_output is not None:
+                member_agent_task += f"\n\n<expected_output>\n{expected_output}\n</expected_output>"
             if team_context_str:
                 member_agent_task += f"\n\n{team_context_str}"
             if team_member_interactions_str:
@@ -4608,24 +4630,24 @@ class Team:
             self._update_team_state(member_agent.run_response)  # type: ignore
 
         async def atransfer_task_to_member(
-            agent_name: str, task_description: str, expected_output: str
+            member_id: str, task_description: str, expected_output: Optional[str] = None
         ) -> AsyncIterator[str]:
             """
             Use this function to transfer a task to the nominated agent.
             You must provide a clear and concise description of the task the agent should achieve AND the expected output.
             Args:
-                agent_name (str): The name of the agent to transfer the task to.
+                member_id (str): The ID of the agent to transfer the task to.
                 task_description (str): A clear and concise description of the task the agent should achieve.
-                expected_output (str): The expected output from the agent.
+                expected_output (str): The expected output from the agent (optional).
             Returns:
                 str: The result of the delegated task.
             """
             self.memory = cast(TeamMemory, self.memory)
 
             # Find the member agent using the helper function
-            result = self._find_member_by_name(agent_name)
+            result = self._find_member_by_id(member_id)
             if result is None:
-                yield f"Agent with name {agent_name} not found in the team or any subteams. Please choose the correct agent from the list of agents."
+                yield f"Agent with ID {member_id} not found in the team or any subteams. Please choose the correct agent from the list of agents:\n{self.get_members_system_message_content(indent=0, minimal=True)}"
                 return
 
             member_agent_index, member_agent = result
@@ -4647,7 +4669,10 @@ class Team:
                     audio.extend([Audio.from_artifact(aud) for aud in context_audio])
 
             # 3. Create the member agent task
-            member_agent_task = f"You are a member of a team of agents. Your goal is to complete the following task:\n\n{task_description}\n\n<expected_output>\n{expected_output}\n</expected_output>"
+            member_agent_task = f"You are a member of a team of agents. Your goal is to complete the following task:\n\n{task_description}"
+
+            if expected_output is not None:
+                member_agent_task += f"\n\n<expected_output>\n{expected_output}\n</expected_output>"
 
             if team_context_str:
                 member_agent_task += f"\n\n{team_context_str}"
@@ -4727,7 +4752,7 @@ class Team:
 
         return transfer_func
 
-    def _find_member_by_name(self, agent_name: str) -> Optional[Tuple[int, Union[Agent, "Team"]]]:
+    def _find_member_by_id(self, member_id: str) -> Optional[Tuple[int, Union[Agent, "Team"]]]:
         """
         Recursively search through team members and subteams to find an agent by name.
 
@@ -4741,12 +4766,14 @@ class Team:
         """
         # First check direct members
         for i, member in enumerate(self.members):
-            if member.name == agent_name:
-                return (i, member)
+            if member.name is not None:
+                url_safe_member_id = member.name.lower().replace(" ", "-").replace("_", "-")
+                if url_safe_member_id == member_id:
+                    return (i, member)
 
             # If this member is a team, search its members recursively
             if isinstance(member, Team):
-                result = member._find_member_by_name(agent_name)
+                result = member._find_member_by_id(member_id)
                 if result is not None:
                     # Found in subteam, return with the top-level team member's name
                     return (i, member)
@@ -4772,12 +4799,12 @@ class Team:
         if not files:
             files = []
 
-        def forward_task_to_member(agent_name: str, expected_output: Optional[str] = None) -> Iterator[str]:
+        def forward_task_to_member(member_id: str, expected_output: Optional[str] = None) -> Iterator[str]:
             """
             Use this function to forward the request to the nominated agent.
             Args:
-                agent_name (str): The name of the agent to transfer the task to.
-                expected_output (str): The expected output from the agent.
+                member_id (str): The ID of the agent to transfer the task to.
+                expected_output (str): The expected output from the agent (optional).
             Returns:
                 str: The result of the delegated task.
             """
@@ -4785,9 +4812,9 @@ class Team:
             self._member_response_model = None
 
             # Find the member agent using the helper function
-            result = self._find_member_by_name(agent_name)
+            result = self._find_member_by_id(member_id)
             if result is None:
-                yield f"Agent with name {agent_name} not found in the team or any subteams. Please choose the correct agent from the list of agents."
+                yield f"Agent with ID {member_id} not found in the team or any subteams. Please choose the correct agent from the list of agents:\n{self.get_members_system_message_content(indent=0, minimal=True)}"
                 return
 
             member_agent_index, member_agent = result
@@ -4861,12 +4888,12 @@ class Team:
             # Update the team state
             self._update_team_state(member_agent.run_response)  # type: ignore
 
-        async def aforward_task_to_member(agent_name: str, expected_output: Optional[str] = None) -> AsyncIterator[str]:
+        async def aforward_task_to_member(member_id: str, expected_output: Optional[str] = None) -> AsyncIterator[str]:
             """
             Use this function to forward a message to the nominated agent.
             Args:
-                agent_name (str): The name of the agent to transfer the task to.
-                expected_output (str): The expected output from the agent.
+                member_id (str): The ID of the agent to transfer the task to.
+                expected_output (str): The expected output from the agent (optional).
             Returns:
                 str: The result of the delegated task.
             """
@@ -4875,9 +4902,9 @@ class Team:
             self._member_response_model = None
 
             # Find the member agent using the helper function
-            result = self._find_member_by_name(agent_name)
+            result = self._find_member_by_id(member_id)
             if result is None:
-                yield f"Agent with name {agent_name} not found in the team or any subteams. Please choose the correct agent from the list of agents."
+                yield f"Agent with ID {member_id} not found in the team or any subteams. Please choose the correct agent from the list of agents:\n{self.get_members_system_message_content(indent=0, minimal=True)}"
                 return
 
             member_agent_index, member_agent = result
@@ -5124,6 +5151,46 @@ class Team:
             except Exception as e:
                 log_warning(f"Failed to load AgentMemory: {e}")
         log_debug(f"-*- TeamSession loaded: {session.session_id}")
+
+    ###########################################################################
+    # Handle images, videos and audio
+    ###########################################################################
+
+    def add_image(self, image: ImageArtifact) -> None:
+        if self.images is None:
+            self.images = []
+        self.images.append(image)
+        if self.run_response is not None:
+            if self.run_response.images is None:
+                self.run_response.images = []
+            self.run_response.images.append(image)
+
+    def add_video(self, video: VideoArtifact) -> None:
+        if self.videos is None:
+            self.videos = []
+        self.videos.append(video)
+        if self.run_response is not None:
+            if self.run_response.videos is None:
+                self.run_response.videos = []
+            self.run_response.videos.append(video)
+
+    def add_audio(self, audio: AudioArtifact) -> None:
+        if self.audio is None:
+            self.audio = []
+        self.audio.append(audio)
+        if self.run_response is not None:
+            if self.run_response.audio is None:
+                self.run_response.audio = []
+            self.run_response.audio.append(audio)
+
+    def get_images(self) -> Optional[List[ImageArtifact]]:
+        return self.images
+
+    def get_videos(self) -> Optional[List[VideoArtifact]]:
+        return self.videos
+
+    def get_audio(self) -> Optional[List[AudioArtifact]]:
+        return self.audio
 
     ###########################################################################
     # Logging
