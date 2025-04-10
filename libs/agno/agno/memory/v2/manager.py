@@ -167,7 +167,7 @@ class MemoryManager:
         ]
 
         if messages:
-            system_prompt_lines.append("<user_messages>")
+            system_prompt_lines.append("\n<user_messages>")
             user_messages = []
             for message in messages:
                 if message.role == "user":

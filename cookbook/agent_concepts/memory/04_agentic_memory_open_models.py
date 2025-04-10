@@ -1,7 +1,6 @@
-from agno.memory.v2 import Memory, MemoryManager
+from agno.memory.v2 import Memory
 from agno.memory.v2.db.sqlite import SqliteMemoryDb
-from agno.models.google.gemini import Gemini
-from agno.models.openai.chat import OpenAIChat
+from agno.models.openrouter.openrouter import OpenRouter
 
 memory_db = SqliteMemoryDb(table_name="memory", db_file="tmp/memory.db")
 
@@ -9,9 +8,9 @@ memory_db = SqliteMemoryDb(table_name="memory", db_file="tmp/memory.db")
 memory_db.clear()
 
 memory = Memory(
-    model=Gemini(id="gemini-2.0-flash-exp"),
-    memory_manager=MemoryManager(model=OpenAIChat(id="gpt-4o")),
+    model=OpenRouter(id="meta-llama/llama-3.3-70b-instruct"),
     db=memory_db,
+    debug_mode=True,
 )
 
 john_doe_id = "john_doe@example.com"

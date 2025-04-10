@@ -1,6 +1,7 @@
 from agno.memory.v2 import Memory
 from agno.memory.v2.db.sqlite import SqliteMemoryDb
 from agno.models.google import Gemini
+from agno.models.message import Message
 
 memory_db = SqliteMemoryDb(table_name="memory", db_file="tmp/memory.db")
 # Reset for this example
@@ -26,5 +27,23 @@ memory.create_user_memory(
 
 memories = memory.get_user_memories(user_id=john_doe_id)
 print("John Doe's memories:")
+for i, m in enumerate(memories):
+    print(f"{i}: {m.memory} - {m.topics}")
+
+
+jane_doe_id = "jane_doe@example.com"
+# Send a history of messages and add memories
+memory.create_user_memories(
+    messages=[
+        Message(role="user", content="My name is Jane Doe"),
+        Message(role="assistant", content="That is great!"),
+        Message(role="user", content="I like to play chess"),
+        Message(role="assistant", content="That is great!"),
+    ],
+    user_id=jane_doe_id,
+)
+
+memories = memory.get_user_memories(user_id=jane_doe_id)
+print("Jane Doe's memories:")
 for i, m in enumerate(memories):
     print(f"{i}: {m.memory} - {m.topics}")
