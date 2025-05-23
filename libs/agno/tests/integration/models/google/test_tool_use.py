@@ -14,6 +14,7 @@ def test_tool_use():
         show_tool_calls=True,
         markdown=True,
         exponential_backoff=True,
+        delay_between_retries=5,
         telemetry=False,
         monitoring=False,
     )
@@ -33,11 +34,12 @@ def test_tool_use_stream():
         show_tool_calls=True,
         markdown=True,
         exponential_backoff=True,
+        delay_between_retries=5,
         telemetry=False,
         monitoring=False,
     )
 
-    response_stream = agent.run("What is the current price of TSLA?", stream=True)
+    response_stream = agent.run("What is the current price of TSLA?", stream=True, stream_intermediate_steps=True)
 
     responses = []
     tool_call_seen = False
@@ -62,6 +64,7 @@ async def test_async_tool_use():
         show_tool_calls=True,
         markdown=True,
         exponential_backoff=True,
+        delay_between_retries=5,
         telemetry=False,
         monitoring=False,
     )
@@ -82,11 +85,14 @@ async def test_async_tool_use_stream():
         show_tool_calls=True,
         markdown=True,
         exponential_backoff=True,
+        delay_between_retries=5,
         telemetry=False,
         monitoring=False,
     )
 
-    response_stream = await agent.arun("What is the current price of TSLA?", stream=True)
+    response_stream = await agent.arun(
+        "What is the current price of TSLA?", stream=True, stream_intermediate_steps=True
+    )
 
     responses = []
     tool_call_seen = False
@@ -110,13 +116,14 @@ def test_tool_use_with_native_structured_outputs():
         currency: str = Field(..., description="The currency of the stock")
 
     agent = Agent(
-        model=Gemini(id="gemini-2.0-flash-exp"),
+        model=Gemini(id="gemini-2.5-flash-preview-04-17"),
         tools=[YFinanceTools(cache_results=True)],
         show_tool_calls=True,
         markdown=True,
         response_model=StockPrice,
         telemetry=False,
         monitoring=False,
+        delay_between_retries=5,
     )
     # Gemini does not support structured outputs for tool calls at this time
     response = agent.run("What is the current price of TSLA?")
@@ -132,8 +139,10 @@ def test_tool_use_with_json_structured_outputs():
         currency: str = Field(..., description="The currency of the stock")
 
     agent = Agent(
-        model=Gemini(id="gemini-2.0-flash-exp"),
+        model=Gemini(id="gemini-2.0-flash-001"),
         tools=[YFinanceTools(cache_results=True)],
+        exponential_backoff=True,
+        delay_between_retries=5,
         show_tool_calls=True,
         markdown=True,
         response_model=StockPrice,
@@ -156,6 +165,7 @@ def test_parallel_tool_calls():
         show_tool_calls=True,
         markdown=True,
         exponential_backoff=True,
+        delay_between_retries=5,
         telemetry=False,
         monitoring=False,
     )
@@ -179,6 +189,7 @@ def test_multiple_tool_calls():
         show_tool_calls=True,
         markdown=True,
         exponential_backoff=True,
+        delay_between_retries=5,
         telemetry=False,
         monitoring=False,
     )
@@ -197,7 +208,9 @@ def test_multiple_tool_calls():
 
 def test_grounding():
     agent = Agent(
-        model=Gemini(id="gemini-2.0-flash-exp", grounding=True),
+        model=Gemini(id="gemini-2.0-flash-001", grounding=True),
+        exponential_backoff=True,
+        delay_between_retries=5,
         telemetry=False,
         monitoring=False,
     )
@@ -213,7 +226,9 @@ def test_grounding():
 
 def test_grounding_stream():
     agent = Agent(
-        model=Gemini(id="gemini-2.0-flash-exp", grounding=True),
+        model=Gemini(id="gemini-2.0-flash-001", grounding=True),
+        exponential_backoff=True,
+        delay_between_retries=5,
         telemetry=False,
         monitoring=False,
     )
@@ -235,7 +250,9 @@ def test_grounding_stream():
 
 def test_search_stream():
     agent = Agent(
-        model=Gemini(id="gemini-2.0-flash-exp", search=True),
+        model=Gemini(id="gemini-2.0-flash-001", search=True),
+        exponential_backoff=True,
+        delay_between_retries=5,
         telemetry=False,
         monitoring=False,
     )

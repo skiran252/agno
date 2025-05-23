@@ -1,11 +1,12 @@
 import os
 from os import getenv
-from typing import Optional
+from typing import Iterable, Iterator, Optional, Union
 from urllib.parse import urlparse
 from uuid import uuid4
 
 from agno.agent import Agent
 from agno.media import ImageArtifact, VideoArtifact
+from agno.team.team import Team
 from agno.tools import Toolkit
 from agno.utils.log import logger
 
@@ -30,7 +31,7 @@ class ReplicateTools(Toolkit):
         self.model = model
         self.register(self.generate_media)
 
-    def generate_media(self, agent: Agent, prompt: str) -> str:
+    def generate_media(self, agent: Union[Agent, Team], prompt: str) -> str:
         """
         Use this function to generate an image or a video using a replicate model.
         Args:
@@ -38,8 +39,33 @@ class ReplicateTools(Toolkit):
         Returns:
             str: Return a URI to the generated video or image.
         """
-        output: FileOutput = replicate.run(ref=self.model, input={"prompt": prompt})
+        if not self.api_key:
+            logger.error("API key is not set. Please provide a valid API key.")
+            return "API key is not set."
 
+        outputs = replicate.run(ref=self.model, input={"prompt": prompt})
+        if isinstance(outputs, FileOutput):
+            outputs = [outputs]
+        elif isinstance(outputs, (Iterable, Iterator)) and not isinstance(outputs, str):
+            outputs = list(outputs)
+        else:
+            logger.error(f"Unexpected output type: {type(outputs)}")
+            return f"Unexpected output type: {type(outputs)}"
+
+        results = []
+        for output in outputs:
+            if not isinstance(output, FileOutput):
+                logger.error(f"Unexpected output type: {type(output)}")
+                return f"Unexpected output type: {type(output)}"
+
+            result = self._parse_output(agent, output)
+            results.append(result)
+        return "\n".join(results)
+
+    def _parse_output(self, agent: Union[Agent, Team], output: FileOutput) -> str:
+        """
+        Parse the outputs from the replicate model.
+        """
         # Parse the URL to extract the file extension
         parsed_url = urlparse(output.url)
         path = parsed_url.path

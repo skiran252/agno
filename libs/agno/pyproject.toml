@@ -1,12 +1,19 @@
 [project]
 name = "agno"
-version = "1.2.15"
+version = "1.5.3"
 description = "Agno: a lightweight library for building Reasoning Agents"
 requires-python = ">=3.7,<4"
 readme = "README.md"
 license = { file = "LICENSE" }
 authors = [
   {name = "Ashpreet Bedi", email = "ashpreet@agno.com"}
+]
+keywords = [
+  "agent",
+  "reasoning",
+  "llm",
+  "large-language-model",
+  "framework",
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -39,7 +46,23 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["mypy", "pytest", "pytest-asyncio", "pytest-cov", "ruff", "timeout-decorator", "types-pyyaml", "types-aiofiles", "fastapi", "uvicorn", "arxiv"]
+dev = ["mypy", "pytest", "pytest-asyncio", "pytest-cov", "pytest-mock", "ruff", "timeout-decorator", "types-pyyaml", "types-aiofiles", "fastapi", "uvicorn", "arxiv"]
+
+# Models integration test dependencies
+integration-tests = [
+    "exa_py",
+    "duckduckgo-search",
+    "yfinance",
+    "sqlalchemy",
+    "Pillow",
+]
+
+# Dependencies for Telemetry
+opentelemetry = ["opentelemetry-sdk", "opentelemetry-exporter-otlp"]
+weave = ["weave"]
+openlit = ["openlit", "agno[opentelemetry]"]
+arize = ["arize-phoenix", "agno[opentelemetry]", "opentelemetry-exporter-otlp-proto-grpc", "opentelemetry-distro"]
+langfuse = ["langfuse"]
 
 # Dependencies for Models
 azure = ["azure-ai-inference", "aiohttp"]
@@ -53,9 +76,14 @@ ollama = ["ollama"]
 ibm = ["ibm-watsonx-ai"]
 lmstudio = ["lmstudio"]
 litellm = ["litellm"]
+meta = ["llama-api-client"]
+cerebras = ["cerebras-cloud-sdk"]
 
 # Dependencies for Tools
+apify = ["apify-client"]
+cartesia = ["cartesia"]
 exa = ["exa_py"]
+mem0 = ["mem0ai"]
 yfinance = ["yfinance"]
 ddg = ["duckduckgo-search"]
 duckdb = ["duckdb"]
@@ -72,23 +100,30 @@ webex = ["webexpythonsdk"]
 mcp = ["mcp"]
 browserbase = ["browserbase", "playwright"]
 agentql = ["agentql"]
+confluence = ["atlassian-python-api"]
+zep = ["zep-cloud"]
+google_bigquery = ["google-cloud-bigquery"]
 
 # Dependencies for Storage
 sql = ["sqlalchemy"]
 postgres = ["psycopg-binary", "psycopg"]
 sqlite = ["sqlalchemy"]
 gcs = ["google-cloud-storage"]
+redis = ["redis"]
 
 # Dependencies for Vector databases
 pgvector = ["pgvector"]
 chromadb = ["chromadb"]
 lancedb = ["lancedb==0.20.0", "tantivy"]
 qdrant = ["qdrant-client"]
+couchbase = ["couchbase"]
 cassandra = ["cassio"]
 mongodb = ["pymongo[srv]"]
 singlestore = ["sqlalchemy"]
 weaviate = ["weaviate-client"]
 milvusdb = ["pymilvus"]
+clickhouse = ["clickhouse-connect"]
+pinecone = ["pinecone==5.4.2"]
 
 # Dependencies for Knowledge
 pdf = ["pypdf", "rapidocr_onnxruntime"]
@@ -119,12 +154,16 @@ models = [
   "agno[ollama]",
   "agno[openai]",
   "agno[ibm]",
-  "agno[litellm]"
+  "agno[litellm]",
+  "agno[meta]",
+  "agno[cerebras]"
 ]
 
 # All tools
 tools = [
+  "agno[apify]",
   "agno[exa]",
+  "agno[cartesia]",
   "agno[ddg]",
   "agno[duckdb]",
   "agno[newspaper]",
@@ -141,6 +180,10 @@ tools = [
   "agno[browserbase]",
   "agno[agentql]",
 #  "agno[yfinance]",  # Broken right now
+  "agno[confluence]",
+  "agno[zep]",
+  "agno[mem0]",
+  "agno[google_bigquery]",
 ]
 
 # All storage
@@ -149,6 +192,7 @@ storage = [
   "agno[postgres]",
   "agno[sqlite]",
   "agno[gcs]",
+  "agno[redis]",
 ]
 
 # All vector databases
@@ -157,11 +201,14 @@ vectordbs = [
   "agno[chromadb]",
   "agno[lancedb]",
   "agno[qdrant]",
+  "agno[couchbase]",
   "agno[cassandra]",
   "agno[mongodb]",
   "agno[singlestore]",
   "agno[weaviate]",
-  "agno[milvusdb]"
+  "agno[milvusdb]",
+  "agno[clickhouse]",
+  "agno[pinecone]"
 ]
 
 # All knowledge
@@ -227,6 +274,7 @@ exclude = ["tests*"]
 [[tool.mypy.overrides]]
 module = [
   "agentql.*",
+  "aiofiles.*",
   "altair.*",
   "anthropic.*",
   "apify_client.*",
@@ -240,6 +288,8 @@ module = [
   "bson.*",
   "browserbase.*",
   "cassio.*",
+  "cerebras.*",
+  "cerebras_cloud_sdk.*",
   "chonkie.*",
   "chromadb.*",
   "clickhouse_connect.*",
@@ -272,8 +322,8 @@ module = [
   "lancedb.*",
   "langchain_core.*",
   "langchain.*",
-  "litellm.*",
   "llama_index.*",
+  "llama_api_client.*",
   "litellm.*",
   "mem0.*",
   "mcp.*",
@@ -301,6 +351,7 @@ module = [
   "pytz.*",
   "qdrant_client.*",
   "rapidocr_onnxruntime.*",
+  "redis.*",
   "replicate.*",
   "requests.*",
   "scrapegraph_py.*",
@@ -324,14 +375,18 @@ module = [
   "twilio.*",
   "tzlocal.*",
   "upstash_vector.*",
+  "urllib3.*",
   "uvicorn.*",
   "vertexai.*",
   "voyageai.*",
   "weaviate.*",
   "webexpythonsdk.*",
   "wikipedia.*",
+  "yaml.*",
   "yfinance.*",
   "youtube_transcript_api.*",
-  "aiofiles.*",
+  "couchbase.*",
+  "acouchbase.*",
+  "zep_cloud.*"
 ]
 ignore_missing_imports = true

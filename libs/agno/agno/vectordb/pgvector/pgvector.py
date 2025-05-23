@@ -1,3 +1,4 @@
+import asyncio
 from hashlib import md5
 from math import sqrt
 from typing import Any, Dict, List, Optional, Union, cast
@@ -204,6 +205,10 @@ class PgVector(VectorDb):
             log_debug(f"Creating table: {self.table_name}")
             self.table.create(self.db_engine)
 
+    async def async_create(self) -> None:
+        """Create the table asynchronously by running in a thread."""
+        await asyncio.to_thread(self.create)
+
     def _record_exists(self, column, value) -> bool:
         """
         Check if a record with the given column value exists in the table.
@@ -238,6 +243,10 @@ class PgVector(VectorDb):
         content_hash = md5(cleaned_content.encode()).hexdigest()
         return self._record_exists(self.table.c.content_hash, content_hash)
 
+    async def async_doc_exists(self, document: Document) -> bool:
+        """Check if document exists asynchronously by running in a thread."""
+        return await asyncio.to_thread(self.doc_exists, document)
+
     def name_exists(self, name: str) -> bool:
         """
         Check if a document with the given name exists in the table.
@@ -249,6 +258,10 @@ class PgVector(VectorDb):
             bool: True if a document with the name exists, False otherwise.
         """
         return self._record_exists(self.table.c.name, name)
+
+    async def async_name_exists(self, name: str) -> bool:
+        """Check if name exists asynchronously by running in a thread."""
+        return await asyncio.to_thread(self.name_exists, name)
 
     def id_exists(self, id: str) -> bool:
         """
@@ -302,6 +315,11 @@ class PgVector(VectorDb):
                                 cleaned_content = self._clean_content(doc.content)
                                 content_hash = md5(cleaned_content.encode()).hexdigest()
                                 _id = doc.id or content_hash
+
+                                meta_data = doc.meta_data or {}
+                                if filters:
+                                    meta_data.update(filters)
+
                                 record = {
                                     "id": _id,
                                     "name": doc.name,
@@ -328,6 +346,10 @@ class PgVector(VectorDb):
         except Exception as e:
             logger.error(f"Error inserting documents: {e}")
             raise
+
+    async def async_insert(self, documents: List[Document], filters: Optional[Dict[str, Any]] = None) -> None:
+        """Insert documents asynchronously by running in a thread."""
+        await asyncio.to_thread(self.insert, documents, filters)
 
     def upsert_available(self) -> bool:
         """
@@ -405,6 +427,10 @@ class PgVector(VectorDb):
             logger.error(f"Error upserting documents: {e}")
             raise
 
+    async def async_upsert(self, documents: List[Document], filters: Optional[Dict[str, Any]] = None) -> None:
+        """Upsert documents asynchronously by running in a thread."""
+        await asyncio.to_thread(self.upsert, documents, filters)
+
     def search(self, query: str, limit: int = 5, filters: Optional[Dict[str, Any]] = None) -> List[Document]:
         """
         Perform a search based on the configured search type.
@@ -426,6 +452,12 @@ class PgVector(VectorDb):
         else:
             logger.error(f"Invalid search type '{self.search_type}'.")
             return []
+
+    async def async_search(
+        self, query: str, limit: int = 5, filters: Optional[Dict[str, Any]] = None
+    ) -> List[Document]:
+        """Search asynchronously by running in a thread."""
+        return await asyncio.to_thread(self.search, query, limit, filters)
 
     def vector_search(self, query: str, limit: int = 5, filters: Optional[Dict[str, Any]] = None) -> List[Document]:
         """
@@ -461,7 +493,7 @@ class PgVector(VectorDb):
 
             # Apply filters if provided
             if filters is not None:
-                stmt = stmt.where(self.table.c.filters.contains(filters))
+                stmt = stmt.where(self.table.c.meta_data.contains(filters))
 
             # Order the results based on the distance metric
             if self.distance == Distance.l2:
@@ -513,6 +545,7 @@ class PgVector(VectorDb):
             if self.reranker:
                 search_results = self.reranker.rerank(query=query, documents=search_results)
 
+            log_info(f"Found {len(search_results)} documents")
             return search_results
         except Exception as e:
             logger.error(f"Error during vector search: {e}")
@@ -570,7 +603,7 @@ class PgVector(VectorDb):
             # Apply filters if provided
             if filters is not None:
                 # Use the contains() method for JSONB columns to check if the filters column contains the specified filters
-                stmt = stmt.where(self.table.c.filters.contains(filters))
+                stmt = stmt.where(self.table.c.meta_data.contains(filters))
 
             # Order by the relevance rank
             stmt = stmt.order_by(text_rank.desc())
@@ -606,6 +639,7 @@ class PgVector(VectorDb):
                     )
                 )
 
+            log_info(f"Found {len(search_results)} documents")
             return search_results
         except Exception as e:
             logger.error(f"Error during keyword search: {e}")
@@ -690,7 +724,7 @@ class PgVector(VectorDb):
 
             # Apply filters if provided
             if filters is not None:
-                stmt = stmt.where(self.table.c.filters.contains(filters))
+                stmt = stmt.where(self.table.c.meta_data.contains(filters))
 
             # Order the results by the hybrid score in descending order
             stmt = stmt.order_by(desc("hybrid_score"))
@@ -729,6 +763,7 @@ class PgVector(VectorDb):
                     )
                 )
 
+            log_info(f"Found {len(search_results)} documents")
             return search_results
         except Exception as e:
             logger.error(f"Error during hybrid search: {e}")
@@ -749,6 +784,10 @@ class PgVector(VectorDb):
         else:
             log_info(f"Table '{self.table.fullname}' does not exist.")
 
+    async def async_drop(self) -> None:
+        """Drop the table asynchronously by running in a thread."""
+        await asyncio.to_thread(self.drop)
+
     def exists(self) -> bool:
         """
         Check if the table exists in the database.
@@ -757,6 +796,10 @@ class PgVector(VectorDb):
             bool: True if the table exists, False otherwise.
         """
         return self.table_exists()
+
+    async def async_exists(self) -> bool:
+        """Check if table exists asynchronously by running in a thread."""
+        return await asyncio.to_thread(self.exists)
 
     def get_count(self) -> int:
         """
@@ -1024,29 +1067,3 @@ class PgVector(VectorDb):
         copied_obj.table = copied_obj.get_table()
 
         return copied_obj
-
-    async def async_create(self) -> None:
-        raise NotImplementedError(f"Async not supported on {self.__class__.__name__}.")
-
-    async def async_doc_exists(self, document: Document) -> bool:
-        raise NotImplementedError(f"Async not supported on {self.__class__.__name__}.")
-
-    async def async_insert(self, documents: List[Document], filters: Optional[Dict[str, Any]] = None) -> None:
-        raise NotImplementedError(f"Async not supported on {self.__class__.__name__}.")
-
-    async def async_upsert(self, documents: List[Document], filters: Optional[Dict[str, Any]] = None) -> None:
-        raise NotImplementedError(f"Async not supported on {self.__class__.__name__}.")
-
-    async def async_search(
-        self, query: str, limit: int = 5, filters: Optional[Dict[str, Any]] = None
-    ) -> List[Document]:
-        raise NotImplementedError(f"Async not supported on {self.__class__.__name__}.")
-
-    async def async_drop(self) -> None:
-        raise NotImplementedError(f"Async not supported on {self.__class__.__name__}.")
-
-    async def async_exists(self) -> bool:
-        raise NotImplementedError(f"Async not supported on {self.__class__.__name__}.")
-
-    async def async_name_exists(self, name: str) -> bool:
-        raise NotImplementedError(f"Async not supported on {self.__class__.__name__}.")

@@ -1,9 +1,10 @@
 from os import getenv
-from typing import Literal, Optional
+from typing import Literal, Optional, Union
 from uuid import uuid4
 
 from agno.agent import Agent
 from agno.media import ImageArtifact
+from agno.team.team import Team
 from agno.tools import Toolkit
 from agno.utils.log import log_debug, logger
 
@@ -57,7 +58,7 @@ class DalleTools(Toolkit):
         # - Add support for saving images
         # - Add support for editing images
 
-    def create_image(self, agent: Agent, prompt: str) -> str:
+    def create_image(self, agent: Union[Agent, Team], prompt: str) -> str:
         """Use this function to generate an image for a prompt.
 
         Args:
@@ -84,14 +85,16 @@ class DalleTools(Toolkit):
 
             # Update the run response with the image URLs
             response_str = ""
-            for img in response.data:
-                agent.add_image(
-                    ImageArtifact(
-                        id=str(uuid4()), url=img.url, original_prompt=prompt, revised_prompt=img.revised_prompt
-                    )
-                )
-                response_str += f"Image has been generated at the URL {img.url}\n"
-            return response_str
+            if response.data:
+                for img in response.data:
+                    if img.url:
+                        agent.add_image(
+                            ImageArtifact(
+                                id=str(uuid4()), url=img.url, original_prompt=prompt, revised_prompt=img.revised_prompt
+                            )
+                        )
+                        response_str += f"Image has been generated at the URL {img.url}\n"
+            return response_str or "No images were generated"
         except Exception as e:
             logger.error(f"Failed to generate image: {e}")
             return f"Error: {e}"
